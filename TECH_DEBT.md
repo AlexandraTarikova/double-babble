@@ -1,4 +1,4 @@
-# Vocab Journey — resume checklist
+# Double Babble — resume checklist
 
 Written 2026-08-13, after a few months away. Every box is meant to be one sitting.
 Tags: `5min` `20min` `1h` `deep` — pick by how much brain you have today.
