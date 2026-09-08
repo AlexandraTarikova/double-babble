@@ -1,0 +1,8 @@
+# Ignore artifacts:
+node_modules/
+
+.DS_Store
+
+TECH_DEBT.md
+
+README.md

@@ -49,7 +49,7 @@ export const theme = createTheme({
     },
     MuiInputBase: {
       styleOverrides: {
-        root: ({ theme }) => ({
+        root: ({ }) => ({
           fontSize: 24,
           fontFamily: "Roboto Mono, monospace",
           color: "white",

@@ -1,6 +1,6 @@
 
 import { styled, Box, keyframes } from "@mui/material";
-import { LinkDirectionType } from "../../data";
+import type { LinkDirectionType } from "../../data";
 
 export const NODE_WIDTH = 150;
 export const NODE_HEIGHT = 80;

@@ -1,8 +1,10 @@
 
 import { Box } from '@mui/material'
-import { FC, useState } from 'react';
-import { NodeType, typedEntries, WordGroups, WordGroupsType, WordType } from '../../data';
-import { AutotranslateButton, ButtonsLine, COLOUR_LANGUAGE_LEFT, COLOUR_LANGUAGE_RIGHT, LanguagesHeader, SubmitWordsButton, TextFieldWord, WordExample, WordGroup, WordGroupHeader, WordLine, WordTranslation } from './styles';
+import { useState } from 'react';
+import type { FC } from 'react';
+import { typedEntries, WordGroups } from '../../data';
+import type { NodeType, WordGroupsType, WordType } from '../../data';
+import { AutotranslateButton, ButtonsLine, COLOUR_LANGUAGE_LEFT, COLOUR_LANGUAGE_RIGHT, LanguagesHeader, SubmitWordsButton, TextFieldWord, WordGroup, WordGroupHeader, WordLine, WordTranslation } from './styles';
 import { RetroSpinner } from '../RetroSpinner';
 
 const REQUIRED_WORDS_PER_LEVEL: Record<WordGroupsType, number> = {

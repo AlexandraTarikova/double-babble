@@ -1,10 +1,11 @@
-import { FC, useEffect, useState } from 'react';
-import { NodeType } from '../../data';
+import { useEffect, useState } from 'react';
+import type { NodeType } from '../../data';
 import { WordList } from './WordList';
 import { ActionsPanel, COLOUR_LIGHT, LevelUpButton, MenuHeader, MenuNodeLevel, MenuZone, NewTitleWrapper, TextButton, TextFieldStyled, TitleButton } from './styles';
 import { WordAdd } from './WordAdd';
 import { Box } from '@mui/material';
 import styled from '@emotion/styled';
+import type { FC } from 'react';
 
 
 export const TitleSVGButton = styled(Box)({

@@ -1,6 +1,7 @@
-import { Box, styled } from '@mui/material'
-import { LinkDirections, LinkDirectionType, NodeType } from '../../data';
-import { FC, SyntheticEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { LinkDirections } from '../../data';
+import type { LinkDirectionType, NodeType } from '../../data';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { FC, SyntheticEvent } from 'react';
 import { MapContainer, MapZone, NODE_HEIGHT, NODE_SPACE, NODE_WIDTH, NodeAddButton, NodeLevel, NodeLink, NodeRoot, NodeTitle } from './styles';
 
 const LEVELS_REQUIRED_PER_LINK = 3;

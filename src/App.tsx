@@ -1,13 +1,13 @@
-import './App.css'
-
 import { Box, styled } from '@mui/material'
 import { ThemeProvider } from '@mui/material/styles';
 import { theme } from './Theme';
-import { LinkDirections, LinkDirectionType, LinkIdsType, NODES_DEMO, NodeType } from './data';
+import { LinkDirections, NODES_DEMO } from './data';
 import { useState } from 'react';
 import { SideMenu } from './components/SideMenu/SideMenu';
 import { Map } from './components/Map';
 import { DebugPanel } from './components/DebugPanel';
+
+import type {LinkDirectionType, LinkIdsType, NodeType} from './data';
 
 
 const COLOUR_DARK = "#361C2E";

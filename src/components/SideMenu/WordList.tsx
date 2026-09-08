@@ -1,7 +1,8 @@
 
 import { Box } from '@mui/material'
-import { FC } from 'react';
-import { NodeType, typedEntries, WordGroups } from '../../data';
+import type { FC } from 'react';
+import { typedEntries, WordGroups } from '../../data';
+import type { NodeType } from '../../data';
 import { COLOUR_LANGUAGE_LEFT, COLOUR_LANGUAGE_RIGHT, LanguagesHeader, NoWordsHint, WordExample, WordGroup, WordGroupHeader, WordLine, WordTranslation } from './styles';
 
 
