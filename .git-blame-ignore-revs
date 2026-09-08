@@ -1,0 +1,4 @@
+# Whole-repo Prettier run. No functional changes.
+# Activate locally with:
+#   git config blame.ignoreRevsFile .git-blame-ignore-revs
+0c804fea33d559a69669c763c123dc33be3d1778
