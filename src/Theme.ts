@@ -1,14 +1,13 @@
-import { createTheme } from "@mui/material/styles";
+import { createTheme } from '@mui/material/styles';
 
 export const theme = createTheme({
-  
   palette: {
     primary: {
-      main: "#D5B9B2",
+      main: '#D5B9B2',
     },
     text: {
-      primary: "#D5B9B2",
-    }
+      primary: '#D5B9B2',
+    },
   },
   components: {
     MuiButton: {
@@ -23,11 +22,11 @@ export const theme = createTheme({
           minWidth: 60,
           borderRadius: 8,
 
-          fontWeight: "normal",
-          fontFamily: "Roboto Mono, monospace",
-          letterSpacing: "0.1px",
+          fontWeight: 'normal',
+          fontFamily: 'Roboto Mono, monospace',
+          letterSpacing: '0.1px',
 
-          textTransform: "none",
+          textTransform: 'none',
           color: theme.palette.text.primary,
         }),
         sizeLarge: {
@@ -40,19 +39,18 @@ export const theme = createTheme({
           fontSize: 12,
         },
         text: {
-          ["&:hover"]: {
-            backgroundColor: "transparent",
-
+          ['&:hover']: {
+            backgroundColor: 'transparent',
           },
         },
       },
     },
     MuiInputBase: {
       styleOverrides: {
-        root: ({ }) => ({
+        root: ({}) => ({
           fontSize: 24,
-          fontFamily: "Roboto Mono, monospace",
-          color: "white",
+          fontFamily: 'Roboto Mono, monospace',
+          color: 'white',
         }),
       },
     },
