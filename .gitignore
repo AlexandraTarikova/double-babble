@@ -29,6 +29,3 @@ yarn-error.log*
 
 # typescript build info
 *.tsbuildinfo
-
-#personal notes
-TECH_DEBT.md
