@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import type { NodeType } from '../../data';
 import { WordList } from './WordList';
 import {
@@ -43,9 +43,6 @@ export const SideMenu: FC<{
   const [title, setTitle] = useState(nodeInFocus.title);
 
   const [levelUpInProgress, setLevelUpInProgress] = useState(false);
-
-  useEffect(() => setTitle(nodeInFocus.title), [nodeInFocus.title]);
-  useEffect(() => setLevelUpInProgress(false), [nodeInFocus.title]);
 
   const hasTitle = nodeInFocus?.title !== '';
 

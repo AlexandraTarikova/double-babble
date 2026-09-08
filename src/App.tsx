@@ -137,6 +137,7 @@ function App() {
         />
         {!!nodeInFocus && (
           <SideMenu
+            key={nodeInFocus.id}
             nodeInFocus={nodeInFocus}
             onNodeRename={(newName) => onNodeRename(nodeInFocus, newName)}
             onCancelClick={onCancelNewNodeClick}

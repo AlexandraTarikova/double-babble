@@ -25,7 +25,7 @@ const REQUIRED_WORDS_PER_LEVEL: Record<WordGroupsType, number> = {
 };
 
 const makeInitWordGroup = (length: number) =>
-  Array.from({ length }).map((_) => ({
+  Array.from({ length }).map(() => ({
     translations: { english: '', swedish: '', french: '' },
     examples: {},
   }));

@@ -106,7 +106,7 @@ export const Map: FC<{
 
   const positions = useMemo(
     () => calculateAllPositions(nodes, nodes[0]),
-    [nodes.length],
+    [nodes],
   );
 
   const minX = Math.min(
@@ -131,7 +131,7 @@ export const Map: FC<{
           },
         ]),
       ),
-    [positions],
+    [positions, minX, minY],
   );
 
   const maxLevel = Math.max(...Object.values(nodes).map((node) => node.level));
@@ -243,26 +243,18 @@ export const Map: FC<{
               .filter((item) => item !== null)
               .includes(nodeFocusedId);
 
-          const canExpandN =
-            !node.linkIds.N &&
-            !Object.values(positionsNormalized).some(
-              (position) => position.x === x && position.y === y - 1,
-            );
-          const canExpandE =
-            !node.linkIds.E &&
-            !Object.values(positionsNormalized).some(
-              (position) => position.x === x + 1 && position.y === y,
-            );
-          const canExpandS =
-            !node.linkIds.S &&
-            !Object.values(positionsNormalized).some(
-              (position) => position.x === x && position.y === y + 1,
-            );
-          const canExpandW =
-            !node.linkIds.W &&
-            !Object.values(positionsNormalized).some(
-              (position) => position.x === x - 1 && position.y === y,
-            );
+          const canExpandN = !Object.values(positionsNormalized).some(
+            (position) => position.x === x && position.y === y - 1,
+          );
+          const canExpandE = !Object.values(positionsNormalized).some(
+            (position) => position.x === x + 1 && position.y === y,
+          );
+          const canExpandS = !Object.values(positionsNormalized).some(
+            (position) => position.x === x && position.y === y + 1,
+          );
+          const canExpandW = !Object.values(positionsNormalized).some(
+            (position) => position.x === x - 1 && position.y === y,
+          );
           return (
             <>
               {node.linkIds.S && (

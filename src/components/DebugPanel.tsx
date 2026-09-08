@@ -1,7 +1,7 @@
 import { Box } from '@mui/material';
 import type { FC } from 'react';
 
-export const DebugPanel: FC<{}> = ({}) => {
+export const DebugPanel: FC = () => {
   const onBoop = async () => {
     const text = 'friend';
     const langpair = 'en|sv';

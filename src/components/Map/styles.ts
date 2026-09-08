@@ -226,7 +226,7 @@ export const NodeLevel = styled(Box, {
       transform: 'translate(-50%,0)',
     },
     '&::before': {
-      content: "\'↑\'",
+      content: "'↑'",
       position: 'absolute',
       left: '50%',
       top: '-16px',
