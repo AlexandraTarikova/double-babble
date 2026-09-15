@@ -22,7 +22,7 @@ export type LinkIdsType = {
   [Direction in LinkDirectionType]: string | null;
 };
 
-export type NodeType = {
+export type MapNode = {
   id: string;
   title: string;
   level: number;
@@ -221,7 +221,7 @@ const ADJECTIVES_DEMO: WordType[] = [
   },
 ];
 
-export const NODES_DEMO: NodeType[] = [
+export const NODES_DEMO: MapNode[] = [
   {
     id: 'forest',
     title: 'Forest',

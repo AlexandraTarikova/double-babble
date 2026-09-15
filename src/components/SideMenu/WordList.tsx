@@ -1,7 +1,7 @@
 import { Box } from '@mui/material';
 import type { FC } from 'react';
 import { typedEntries, WordGroups } from '../../data';
-import type { NodeType } from '../../data';
+import type { MapNode } from '../../data';
 import {
   COLOUR_LANGUAGE_LEFT,
   COLOUR_LANGUAGE_RIGHT,
@@ -15,7 +15,7 @@ import {
 } from './styles';
 
 export const WordList: FC<{
-  nodeInFocus: NodeType;
+  nodeInFocus: MapNode;
 }> = ({ nodeInFocus }) => {
   const totalAmount = Object.values(nodeInFocus.words).flat().length;
 

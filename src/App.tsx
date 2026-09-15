@@ -1,13 +1,16 @@
 import { Box, styled } from '@mui/material';
 import { ThemeProvider } from '@mui/material/styles';
 import { theme } from './Theme';
-import { LinkDirections, NODES_DEMO } from './data';
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { SideMenu } from './components/SideMenu/SideMenu';
 import { Map } from './components/Map';
 import { DebugPanel } from './components/DebugPanel';
 
-import type { LinkDirectionType, LinkIdsType, NodeType } from './data';
+import type { LinkDirectionType, MapNode } from './data';
+import { createNode } from './helpers';
+import { getInitialState, saveAction } from './storage';
+import { useReducer } from 'react';
+import { NodeActionTypes, nodesReducer, type NodeAction } from './nodesReducer';
 
 const COLOUR_DARK = '#361C2E';
 
@@ -22,101 +25,54 @@ const RootZone = styled(Box)({
   overflow: 'hidden',
 });
 
-const oppositeDirections: Record<LinkDirectionType, LinkDirectionType> = {
-  N: 'S',
-  E: 'W',
-  S: 'N',
-  W: 'E',
-};
-
-const makeId = () =>
-  Date.now().toString(36) +
-  Math.floor(Math.pow(10, 12) + Math.random() * 9 * Math.pow(10, 12)).toString(
-    36,
-  );
-
-const unlinkTargetNode = (
-  linkIds: LinkIdsType,
-  targetNodeId: string,
-): LinkIdsType => {
-  return LinkDirections.reduce<LinkIdsType>(
-    (acc, direction) => ({
-      ...acc,
-      [direction]:
-        linkIds[direction] === targetNodeId ? null : linkIds[direction],
-    }),
-    { ...linkIds },
-  );
-};
-
-const newNode = {
-  id: 'newNode',
-  title: '',
-  level: 0,
-  words: {
-    nouns: [],
-    verbs: [],
-    adjectives: [],
-  },
-  parentId: null,
-  innerNodeIds: [],
-  linkIds: {
-    N: null,
-    E: null,
-    S: null,
-    W: null,
-  },
-};
-
 type SideMenuType = string | null;
 
 function App() {
-  const [nodes, setNodes] = useState(NODES_DEMO);
+  const [nodes, dispatchNodes] = useReducer(
+    nodesReducer,
+    undefined,
+    getInitialState,
+  );
   const [menuType, setMenuType] = useState<SideMenuType>(null);
   const nodeInFocus = menuType
     ? nodes.find((item) => item.id === menuType)
     : null;
 
-  const onNodeClick = (targetNode: NodeType) => {
+  const dispatch = useCallback((action: NodeAction) => {
+    saveAction(action);
+    dispatchNodes(action);
+  }, []);
+
+  const onNodeClick = (targetNode: MapNode) => {
     setMenuType(targetNode.id);
   };
-  const onNodeRename = (targetNode: NodeType, newName: string) => {
-    const nodesUnaffected = nodes.filter((node) => node.id !== targetNode.id);
-    const targetNodeUpdated = { ...targetNode, title: newName };
-    setNodes([...nodesUnaffected, targetNodeUpdated]);
+  const onNodeRename = (targetNode: MapNode, newName: string) => {
+    dispatch({
+      type: NodeActionTypes.edit,
+      payload: { id: targetNode.id, changes: { title: newName } },
+    });
   };
 
   const onAddNodeClick = (
-    targetNode: NodeType,
+    targetNode: MapNode,
     direction: LinkDirectionType,
   ) => {
-    const id = makeId();
-    const nodesUnaffected = nodes.filter((node) => node.id !== targetNode.id);
-    const newNodeUpdated = {
-      ...newNode,
-      id,
-      linkIds: {
-        ...newNode.linkIds,
-        [oppositeDirections[direction]]: targetNode.id,
+    const newNode = createNode();
+    dispatch({
+      type: NodeActionTypes.add,
+      payload: {
+        node: newNode,
+        targetNodeId: targetNode.id,
+        direction,
       },
-    };
-    const targetNodeUpdated = {
-      ...targetNode,
-      linkIds: { ...targetNode.linkIds, [direction]: newNodeUpdated.id },
-    };
-    setNodes([...nodesUnaffected, targetNodeUpdated, newNodeUpdated]);
-    setMenuType(id);
+    });
+    setMenuType(newNode.id);
   };
 
   const onCancelNewNodeClick = (targetNodeId: string) => {
-    setNodes((nodes) =>
-      nodes
-        .filter((node) => node.id !== targetNodeId)
-        .map((node) => ({
-          ...node,
-          linkIds: unlinkTargetNode(node.linkIds, targetNodeId),
-        })),
-    );
+    if (nodes.length > 1) {
+      dispatch({ type: NodeActionTypes.delete, payload: targetNodeId });
+    }
     closeMenu();
   };
 
@@ -126,7 +82,7 @@ function App() {
 
   return (
     <ThemeProvider theme={theme}>
-      <DebugPanel />
+      <DebugPanel dispatchNodes={dispatchNodes} closeMenu={closeMenu} />
       <RootZone>
         <Map
           nodes={nodes}

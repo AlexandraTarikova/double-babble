@@ -2,7 +2,7 @@ import { Box } from '@mui/material';
 import { useState } from 'react';
 import type { FC } from 'react';
 import { typedEntries, WordGroups } from '../../data';
-import type { NodeType, WordGroupsType, WordType } from '../../data';
+import type { MapNode, WordGroupsType, WordType } from '../../data';
 import {
   AutotranslateButton,
   ButtonsLine,
@@ -31,7 +31,7 @@ const makeInitWordGroup = (length: number) =>
   }));
 
 export const WordAdd: FC<{
-  nodeInFocus: NodeType;
+  nodeInFocus: MapNode;
   onCancelClick: () => void;
 }> = ({ onCancelClick }) => {
   const [nouns, setNouns] = useState<WordType[]>(

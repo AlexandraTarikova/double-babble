@@ -1,5 +1,5 @@
 import { LinkDirections } from '../../data';
-import type { LinkDirectionType, NodeType } from '../../data';
+import type { LinkDirectionType, MapNode } from '../../data';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { FC, SyntheticEvent } from 'react';
 import {
@@ -32,13 +32,13 @@ const directionShift: Record<LinkDirectionType, { x: number; y: number }> = {
 };
 
 const calculateAllPositions = (
-  nodes: NodeType[],
-  startNode: NodeType | null | undefined,
+  nodes: MapNode[],
+  startNode: MapNode | null | undefined,
 ): Record<string, { x: number | null; y: number | null }> => {
   const positions: Record<string, { x: number | null; y: number | null }> =
     Object.fromEntries(nodes.map((n) => [n.id, { x: null, y: null }]));
   const walk = (
-    currentNode: NodeType | null | undefined,
+    currentNode: MapNode | null | undefined,
     directionProp: LinkDirectionType | 'start',
   ) => {
     if (
@@ -84,10 +84,10 @@ const mapToScale = (value: number, min: number, max: number): number => {
 };
 
 export const Map: FC<{
-  nodes: NodeType[];
+  nodes: MapNode[];
   nodeFocusedId: string | null;
-  onNodeClick: (targetNode: NodeType) => void;
-  onAddNodeClick: (targetNode: NodeType, direction: LinkDirectionType) => void;
+  onNodeClick: (targetNode: MapNode) => void;
+  onAddNodeClick: (targetNode: MapNode, direction: LinkDirectionType) => void;
   onMapClick: () => void;
 }> = ({ nodes, nodeFocusedId, onNodeClick, onAddNodeClick, onMapClick }) => {
   const [nodeCenteredId, setNodeCenteredId] = useState<string | null>(null);
@@ -136,7 +136,7 @@ export const Map: FC<{
 
   const maxLevel = Math.max(...Object.values(nodes).map((node) => node.level));
 
-  const nodeClickHandler = (e: SyntheticEvent, targetNode: NodeType) => {
+  const nodeClickHandler = (e: SyntheticEvent, targetNode: MapNode) => {
     onNodeClick(targetNode);
     scrollToNode(targetNode.id);
     setNodeLevelPulsingId(null);
@@ -146,19 +146,22 @@ export const Map: FC<{
 
   const addNodeClickHandler = (
     e: SyntheticEvent,
-    targetNode: NodeType,
+    targetNode: MapNode,
     direction: LinkDirectionType,
   ) => {
     const linksAmount = Object.values(targetNode.linkIds).filter(
       (id) => id !== null,
     ).length;
     e.stopPropagation();
-    if (
-      linksAmount >= Math.floor(targetNode.level / LEVELS_REQUIRED_PER_LINK)
-    ) {
-      handleDisabledClick(targetNode.id);
-      return;
-    }
+    // TODO: uncomment later
+    // disabled for easier feature testing while VIP
+
+    // if (
+    //   linksAmount >= Math.floor(targetNode.level / LEVELS_REQUIRED_PER_LINK)
+    // ) {
+    //   handleDisabledClick(targetNode.id);
+    //   return;
+    // }
     onAddNodeClick(targetNode, direction);
     scrollToNode(targetNode.id);
     setNodeLevelPulsingId(null);

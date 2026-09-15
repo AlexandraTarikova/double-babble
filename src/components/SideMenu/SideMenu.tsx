@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { NodeType } from '../../data';
+import type { MapNode } from '../../data';
 import { WordList } from './WordList';
 import {
   ActionsPanel,
@@ -35,7 +35,7 @@ export const TitleSVGButton = styled(Box)({
 });
 
 export const SideMenu: FC<{
-  nodeInFocus: NodeType;
+  nodeInFocus: MapNode;
   onNodeRename: (newName: string) => void;
   onCancelClick: (targetNodeId: string) => void;
 }> = ({ nodeInFocus, onNodeRename, onCancelClick }) => {
