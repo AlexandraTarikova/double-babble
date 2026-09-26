@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { MapNode } from '../../data';
+import type { MapNode, WordGroupsType, Word } from '../../data';
 import { WordList } from './WordList';
 import {
   ActionsPanel,
@@ -17,6 +17,7 @@ import { WordAdd } from './WordAdd';
 import { Box } from '@mui/material';
 import styled from '@emotion/styled';
 import type { FC } from 'react';
+import { getNodeLevel } from '../../helpers';
 
 export const TitleSVGButton = styled(Box)({
   width: '50px',
@@ -38,7 +39,11 @@ export const SideMenu: FC<{
   nodeInFocus: MapNode;
   onNodeRename: (newName: string) => void;
   onCancelClick: (targetNodeId: string) => void;
-}> = ({ nodeInFocus, onNodeRename, onCancelClick }) => {
+  onAddWords: (
+    targetNodeId: string,
+    words: Record<WordGroupsType, Word[]>,
+  ) => void;
+}> = ({ nodeInFocus, onNodeRename, onCancelClick, onAddWords }) => {
   const totalAmount = Object.values(nodeInFocus.words).flat().length;
   const [title, setTitle] = useState(nodeInFocus.title);
 
@@ -49,6 +54,8 @@ export const SideMenu: FC<{
   const onSubmitTitle = (newName: string) => {
     onNodeRename(newName);
   };
+
+  const level = getNodeLevel(nodeInFocus);
 
   return (
     <MenuZone>
@@ -64,9 +71,9 @@ export const SideMenu: FC<{
               {nodeInFocus?.title}
             </Box>
             <MenuNodeLevel>
-              Level {nodeInFocus?.level}{' '}
+              Level {level}{' '}
               {levelUpInProgress ? (
-                `-> ${nodeInFocus.level + 1}`
+                `-> ${level + 1}`
               ) : (
                 <LevelUpButton
                   animated={totalAmount === 0}
@@ -125,7 +132,8 @@ export const SideMenu: FC<{
       {hasTitle && levelUpInProgress && (
         <WordAdd
           nodeInFocus={nodeInFocus}
-          onCancelClick={() => setLevelUpInProgress(false)}
+          goBack={() => setLevelUpInProgress(false)}
+          onAddWords={onAddWords}
         />
       )}
       {/* {hasTitle && levelUpInProgress && (

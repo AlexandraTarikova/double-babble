@@ -6,7 +6,7 @@ import { SideMenu } from './components/SideMenu/SideMenu';
 import { Map } from './components/Map';
 import { DebugPanel } from './components/DebugPanel';
 
-import type { LinkDirectionType, MapNode } from './data';
+import type { LinkDirectionType, MapNode, WordGroupsType, Word } from './data';
 import { createNode } from './helpers';
 import { getInitialState, saveAction } from './storage';
 import { useReducer } from 'react';
@@ -59,7 +59,7 @@ function App() {
   ) => {
     const newNode = createNode();
     dispatch({
-      type: NodeActionTypes.add,
+      type: NodeActionTypes.addNode,
       payload: {
         node: newNode,
         targetNodeId: targetNode.id,
@@ -74,6 +74,16 @@ function App() {
       dispatch({ type: NodeActionTypes.delete, payload: targetNodeId });
     }
     closeMenu();
+  };
+
+  const onAddWords = (
+    targetNodeId: string,
+    words: Record<WordGroupsType, Word[]>,
+  ) => {
+    dispatch({
+      type: NodeActionTypes.addWords,
+      payload: { targetNodeId, words },
+    });
   };
 
   const closeMenu = () => {
@@ -97,6 +107,7 @@ function App() {
             nodeInFocus={nodeInFocus}
             onNodeRename={(newName) => onNodeRename(nodeInFocus, newName)}
             onCancelClick={onCancelNewNodeClick}
+            onAddWords={onAddWords}
           />
         )}
       </RootZone>

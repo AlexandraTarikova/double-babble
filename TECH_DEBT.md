@@ -1,25 +1,37 @@
 # Double Babble — resume checklist
 
-Written 2026-08-13 after a few months away. Updated 2026-09-15.
+Written 2026-08-13 after a few months away. Updated 2026-09-26.
 Every box is meant to be one sitting.
 Tags: `5min` `20min` `1h` `deep` — pick by how much brain you have today.
 
-Line numbers below were re-verified on 2026-09-15, after persistence landed and `App.tsx`
-shrank from 180 lines to 107. If they drift again, `grep` beats trusting them.
+Line numbers below were re-verified on 2026-09-26, after `WordAdd` was rewritten and the
+stored `level` field was deleted. If they drift again, `grep` beats trusting them.
 
 ---
 
 ## Where things stand
 
 - **`npm run build` passes**, and `npx prettier --check src/` is clean.
-- **`npm run lint` has 3 errors, all one cause.** The branch gate at `Map.tsx:156-164` is
-  commented out, which orphans `LEVELS_REQUIRED_PER_LINK` (`:18`), `handleDisabledClick`
-  (`:98`) and `linksAmount` (`:152`). That's a deferred decision, not rot: the gate is staying, it just can't be switched on
-  until level-up exists — see T2.3.
+- **`npm run lint` has 3 errors, all one cause.** The branch gate at `Map.tsx:162-167` is
+  commented out, which orphans `LEVELS_REQUIRED_PER_LINK` (`:19`), `handleDisabledClick`
+  (`:99`) and `linksAmount` (`:155`). That's a deferred decision, not rot: the gate is
+  staying, and as of 2026-09-26 the thing that was blocking it has landed — see T2.3.
   `noUnusedLocals` / `noUnusedParameters` are now commented out in `tsconfig.app.json:20-21`
   so unused vars no longer fail the build, and `.vscode/settings.json` downgrades them to a
   hint in the editor instead of red.
 - **Persistence works.** T3 is done — see the Done log for the shape of it.
+- **The game loop closes.** T2.1 and T4 level-up both landed 2026-09-17. `WordAdd` holds one
+  `Record<WordGroupsType, Word[]>`, **Save** / **Level up** commits through a dedicated
+  `addWords` action, and the map redraws with the new level. You can actually play it now:
+  add words, gain a level, watch the node grow. That was the "makes it a game" milestone.
+- **`level` is no longer stored — it's derived.** `getNodeLevel(node)` (`helpers.ts:29`)
+  computes it from word counts against `REQUIRED_WORDS_PER_LEVEL` (`helpers.ts:23`), and the
+  field is gone from `MapNode`. Same instinct as `calculateAllPositions` deriving layout from
+  links: one source of truth, nothing to keep in sync, and the rule is retuned by editing one
+  constant. One consequence to know about — **the commented-out branch gate still reads
+  `targetNode.level` (`Map.tsx:163`), so uncommenting it as written won't compile.** See T2.3.
+- **Autotranslate works, and fails cleanly.** Four sittings got there. What's left is
+  structural, not broken — T5 has it, and says why not to reopen it.
 - **Version control exists**, with a `.git-blame-ignore-revs` so the Prettier commit
   doesn't pollute `git blame`.
 - **The hard part works.** `calculateAllPositions` (`Map.tsx:34`) derives the whole layout
@@ -28,7 +40,7 @@ shrank from 180 lines to 107. If they drift again, `grep` beats trusting them.
   the types, waiting. Caveat: `parentId` is **`null` on every node** — all 7 demo nodes and
   every node `createNode` produces (`helpers.ts:13`). It's a door left open, not a usable
   field. Don't reach for it as a "find the root" marker until something actually sets it.
-- ~2,470 lines across 18 files — but 729 of those are `data.ts`, almost all demo
+- ~2,750 lines across 20 files — but 725 of those are `data.ts`, almost all demo
   vocabulary. The code itself is still small and tidy.
 
 ---
@@ -44,17 +56,17 @@ bug that surfaces somewhere unrelated.
 Verified 2026-09-08 by walking all 7 demo nodes as anchor. **Four** separate pieces of
 code depend on this:
 
-- `calculateAllPositions` (`Map.tsx:34`) only positions nodes reachable from its start
+- `calculateAllPositions` (`Map.tsx:35`) only positions nodes reachable from its start
   node. Unreachable nodes keep `{x: null, y: null}`.
-- The render bails with a bare `return` on a null position (`Map.tsx:235`), so an
+- The render bails with a bare `return` on a null position (`Map.tsx:241`), so an
   unreachable node **renders as nothing at all**. Silent data loss from the user's view.
-- `nodes[0]` is the layout anchor (`Map.tsx:107`). Safe only because every anchor reaches
+- `nodes[0]` is the layout anchor (`Map.tsx:109`). Safe only because every anchor reaches
   every node — see invariant 2.
-- `canExpandN/E/S/W` (`Map.tsx:246-257`) test cell occupancy *only*, no longer the
+- `canExpandN/E/S/W` (`Map.tsx:252-262`) test cell occupancy *only*, no longer the
   `linkIds` slot. That simplification is correct **because** a linked neighbour always
   occupies the adjacent cell — which requires it to have a position. If a linked node is
   ever unpositioned, a `[+]` renders over a live link and clicking it overwrites
-  `linkIds`, orphaning the old neighbour. Worth a one-line comment at `Map.tsx:246`.
+  `linkIds`, orphaning the old neighbour. Worth a one-line comment at `Map.tsx:252`.
 
 **This is also the core game mechanic**, not just an implementation detail: the whole point
 is building a path from words you have to words you want. A disconnected node is a
@@ -64,11 +76,14 @@ state and let the layout assume it. See T4 "Delete a node".
 **It holds today, but nothing checks it.** Verified 2026-09-15. It survives on a chain of
 four facts spread across three files, and no single place states the rule:
 
-1. `SideMenu.tsx:118` — the `[x]` that fires the only delete path renders inside
-   `{!hasTitle && ...}`, so **only an untitled node can ever be deleted**.
-2. `SideMenu.tsx:71` — `LevelUpButton` renders inside `{hasTitle && ...}`, so an untitled
-   node is **permanently level 0**.
-3. The branch gate (`Map.tsx:156-164` — commented out, but staying; see T2.3) is
+1. `SideMenu.tsx:125` — the `[x]` that fires the only delete path renders inside
+   `{!hasTitle && ...}` (`:98`), so **only an untitled node can ever be deleted**.
+2. `SideMenu.tsx:78` — `LevelUpButton` renders inside `{hasTitle && ...}` (`:63`), and
+   `WordAdd` — the only UI anywhere that adds words — renders inside
+   `{hasTitle && levelUpInProgress}` (`SideMenu.tsx:132`). Since level is now *derived* from
+   word count, an untitled node can never gain a word, so it is **permanently level 0**. The
+   conclusion survived the stored-`level` removal; the reason for it got stronger.
+3. The branch gate (`Map.tsx:162-167` — commented out, but staying; see T2.3) is
    `linksAmount >= Math.floor(level / 3)`. At level 0 that is `>= 0`, and every non-root node
    already holds one link back to its parent, so the test passes and the add is blocked. Not
    "needs level 3" — **level 0 blocks branching outright**. So an untitled node can never
@@ -90,7 +105,7 @@ check is not optional polish, it's what has to land in the same commit as any wi
 condition 3: name a node, `[+]` from it, `[+]` again from the still-untitled middle node,
 name the third, then `[x]` the middle one. Both ends survive, unconnected.
 `calculateAllPositions` walks from `nodes[0]`, the far node keeps `{x: null, y: null}`, and
-`Map.tsx:235` renders nothing for it — gone from the map, still in state and still in the log,
+`Map.tsx:241` renders nothing for it — gone from the map, still in state and still in the log,
 across reloads. That's a reason not to leave the gate off for long, not a separate bug.
 
 ### 2. The graph is a tree, by construction.
@@ -114,7 +129,7 @@ Consequences worth knowing before you change anything about adding:
 
 ### 3. Links are symmetric.
 
-The `add` case of `nodesReducer` (`nodesReducer.ts:60-73`) writes both sides — the new
+The `addNode` case of `nodesReducer` (`nodesReducer.ts:69-92`) writes both sides — the new
 node's back-link and the parent's forward link. Every demo node reciprocates. `calculateAllPositions` traverses via
 `currentNode.linkIds[direction]` and positions the child via its back-link, so a one-sided
 link means the child never gets positioned (→ invariant 1). A link pointing at a
@@ -137,9 +152,13 @@ four things must all hold:
   uuid instead, every replay would produce different ids and the whole graph would come
   apart. This is the single most important line to not "tidy up" later.
 - **Actions describe the change, not the result.** `edit` carries
-  `{id, changes}` and `add` carries `targetNodeId`, so the reducer reads current values out
-  of `state`. An action carrying a whole captured node would write a stale copy back on
-  replay.
+  `{id, changes}` and `addNode` carries `targetNodeId`, so the reducer reads current values
+  out of `state`. An action carrying a whole captured node would write a stale copy back on
+  replay. `addWords` (`nodesReducer.ts:94`) is the newest case and gets this right: it carries
+  only the words being added and appends them to whatever the node holds *at replay time*.
+  The tempting alternative — reusing `edit` with `changes: {words}` — would have forced every
+  action to carry the whole merged array, growing the log quadratically and storing a snapshot
+  dressed up as a delta.
 - **`set` is never logged.** It replaces the entire map, so it pairs with
   `resetHistoryTo`, which writes a *new base* and empties the log
   (`DebugPanel.tsx:23`, `:34`). Everything else goes through the logging `dispatch`
@@ -148,6 +167,15 @@ four things must all hold:
 
 Verified 2026-09-14: a six-action session (add / edit / add / delete / add / edit) replays
 byte-identically to the live state.
+
+**Added 2026-09-26 — a shape change has already happened, and `schema` didn't move.** Deleting
+the stored `level` field changed both `MapNode` and the `edit` payload type
+(`nodesReducer.ts:53`), but `isHistory` (`storage.ts:8`) only checks `schema === 1`, so a
+`nodesHistory` written before the change still loads: its `base` nodes carry a stray `level`,
+and any logged `edit` with `changes: {level: n}` writes that stray field back on replay.
+Harmless today — nothing reads it and `getNodeLevel` ignores it — but it's the first real
+instance of the problem the T3 `schema` item describes, and proof the guard won't catch the
+next one. If a saved map ever looks wrong, "Clear history" in `DebugPanel` is the reset.
 
 ---
 
@@ -212,6 +240,33 @@ fresh object per call, so new nodes no longer share `nouns`/`verbs`/`adjectives`
 Landed before persistence, which matters: saving shared-by-reference arrays would have
 baked the bug into stored data.
 
+**T2.1 — `WordAdd` state** ✅ 2026-09-17 — one `Record<WordGroupsType, Word[]>` (`:92`) with a
+`handleChangeWord(group, i, language)` (`:105`), so verbs and adjectives stop writing into the
+nouns array. Row counts now come from `deficit` (`:82`), which asks how many of each group the
+node still needs for its next level — so the form shows exactly what's missing instead of a
+fixed six.
+
+**T4 level-up** ✅ 2026-09-17 — **Save** / **Level up** (`WordAdd.tsx:294`) commits through
+`handleSubmit` (`:124`) → `onAddWords` (`App.tsx:79`) → a dedicated `addWords` case
+(`nodesReducer.ts:94`). This is the commit where it became a game. Two decisions worth keeping:
+- **One button, not two.** With `level` derived, "save partial progress" and "level up" are
+  the *same* action — appending words — so the button just flips its label on `allFilled`
+  (`:295`). The third button you were considering would have been a second name for one
+  dispatch.
+- **`level` deleted rather than incremented.** The reducer never writes a level;
+  `getNodeLevel` derives it from word counts. That's why there is no stale-level bug to worry
+  about, and why the levelling rule can be retuned by editing one constant.
+
+**T2.13 — autotranslate error path** ✅ 2026-09-26, and it took four sittings. `translate`
+(`WordAdd.tsx:48`) throws on `!response.ok`, `getPromiseValue` (`:61`) logs `r.reason` and
+returns `undefined`, the `?? word.translations[language]` fallback (`:166`, `:167`) keeps the
+typed value, and `try`/`catch`/`finally` means the spinner always clears. All three inputs are
+`disabled={isLoading}` (`:242`, `:260`, `:273`).
+The lesson that cost the most time, written down so it's never rediscovered: **`Promise.allSettled`
+never rejects.** With the network off, nothing reached `catch` and nothing printed — the failures
+were sitting in the results array as `{status: 'rejected'}` entries the whole time. What looked
+like a frozen app was a `null` reaching a controlled `value`; see T5 for that mechanism.
+
 Still open from T0:
 - [ ] **Rewrite `README.md`** `20min` — still the untouched Vite template. Paste in your own
       description of the concept (nodes, levels, branching, inner maps, two languages +
@@ -223,24 +278,17 @@ Still open from T0:
 
 ## T2 — Real bugs (in rough order of how much they'll bite)
 
-- [ ] **1. Verbs and adjectives write into the nouns array.** `deep`-ish, high value.
-      `WordAdd.tsx` holds one piece of state — `nouns` (`:37`) — but renders all three
-      groups from it: `nouns[index]` at `:152`, `:154`, `:167`, `:180`. So typing a verb
-      overwrites noun row 0. Worse, `nouns` has 6 slots and verbs/adjectives have 3, so the
-      rows never line up. `allFilled` (`:112`) also only checks nouns — which is why
-      **Level up** never enables.
-      Fix: one state object keyed by word group, `Record<WordGroupsType, WordType[]>`, and a
-      `handleChange(group, i, language)`.
+- [x] **1. Verbs and adjectives write into the nouns array.** ✅ Done — see the Done log.
 - [ ] **2. The level-up hint shows the wrong number.** `5min`
-      `Map.tsx:309` computes `Math.floor(node.level / 3) * 3 + 3`, correct only when you
+      `Map.tsx:316` computes `Math.floor(level / 3) * 3 + 3`, correct only when you
       already have as many links as your level allows. For a **freshly branched node**
       (level 0, one link back to its parent) it promises "3", but the gate
-      (`Map.tsx:156-164`, currently commented out) needs `floor(level/3) > 1` — i.e.
+      (`Map.tsx:162-167`, currently commented out) needs `floor(level/3) > 1` — i.e.
       **level 6**. That's the most common case in the app.
       Fix: `(linksCount + 1) * LEVELS_REQUIRED_PER_LINK`.
 - [ ] **3. The branch gate is commented out — restore it, but not first.** `20min`, and it's
       the single cause of the three lint errors.
-      The gate is `linksAmount >= Math.floor(level / 3)` (`Map.tsx:156-164`) and
+      The gate is `linksAmount >= Math.floor(level / 3)` (`Map.tsx:162-167`) and
       `linksAmount` counts *all* links including the one back to the parent. So the root gets
       its first branch at level 3 but **every other node needs level 6**. Either that's the
       intended difficulty curve — write it down in the README — or exclude the incoming link.
@@ -250,22 +298,41 @@ Still open from T0:
       `0 >= Math.floor(0 / 3)` blocks even the very first add: switching the gate on today
       means nothing can branch at all. That's why it's commented out, and it's the whole
       reason T4 level-up sits ahead of it in the queue.
+      **Update 2026-09-26: the blocker is gone — level-up landed, so this is switchable now,
+      and it's the suggested next task.** Two things to handle while switching it on:
+      1. **It won't compile as written.** `Map.tsx:163` reads `targetNode.level`, and that
+         field no longer exists — `level` is derived now. It has to become
+         `getNodeLevel(targetNode)`, which `Map.tsx` already imports.
+      2. **Check what the first branch actually costs before committing to it.** A fresh root
+         is level 0, so `0 >= Math.floor(0 / 3)` still blocks its first add — it has to reach
+         level 3 first, which at the current `REQUIRED_WORDS_PER_LEVEL` (`helpers.ts:23`)
+         means 15 nouns, 6 verbs and 6 adjectives before the map can grow at all. That may
+         well be too long a wait for a first-time player. It's one constant; tune it by
+         playing.
       It also does a second, quieter job — it is condition 3 of invariant 1, the thing that
       stops an unnamed node from acquiring children it could orphan. So it's not only pacing,
       and the map is genuinely splittable while it's off.
-- [ ] **4. Missing React keys on three list renders.** `20min`
-      `Map.tsx:259` returns a `<>…</>` per node with the `key` on the inner `NodeRoot`
-      instead of on the fragment — and `<>` can't take a key, so this needs
-      `<Fragment key={node.id}>`. Same shape at `WordAdd.tsx:138` (`WordGroup` unkeyed, key
-      on `WordGroupHeader` at `:139`) and `WordList.tsx:36`.
+- [ ] **4. Missing React keys — one of three fixed.** `20min`
+      ✅ `WordAdd` is done: `<WordGroup key={key}>` (`:231`) and `<WordLine key={...}>`
+      (`:238`).
+      Still open, and both are the *same misplacement* — a key on a child instead of on the
+      element the `.map()` returns:
+      - `Map.tsx:266` returns a bare `<>…</>` per node with the key on the inner `NodeRoot`
+        (`:300`). `<>` can't take a key, so this needs `<Fragment key={node.id}>`.
+      - `WordList.tsx:45` returns an unkeyed `<WordGroup>` with the key on
+        `<WordGroupHeader>` (`:46`). Move it up one level.
+      Separately, and a real collision rather than a warning: `WordList.tsx:53` keys each row
+      on its three translations concatenated, and `addWords` appends without dedup — so adding
+      the same word twice produces two rows with an identical key. Position-based
+      (`${group}_${index}`) is the honest choice here, the way `WordAdd` does it.
       Note: **lint will never catch these** — `eslint-plugin-react` isn't installed, only
       `react-hooks` and `react-refresh`. They're browser-console warnings. Causes needless
       remounts, which is exactly what makes input focus and animations feel flaky.
 - [ ] **5. The layout anchor is implicit.** `20min` — half done.
-      ✅ The reordering half is fixed: `add` and `edit` now use `.map()` instead of
-      filter-then-append (`nodesReducer.ts:74`, `:80`), so existing array order is never
+      ✅ The reordering half is fixed: `addNode` and `edit` now use `.map()` instead of
+      filter-then-append (`nodesReducer.ts:89`, `:119`), so existing array order is never
       permuted and new nodes append at the end.
-      Still open: `calculateAllPositions(nodes, nodes[0])` (`Map.tsx:107`) anchors on
+      Still open: `calculateAllPositions(nodes, nodes[0])` (`Map.tsx:109`) anchors on
       whatever happens to be first. **No visible symptom** (invariant 2: normalization makes
       the anchor irrelevant), so this isn't fixing a bug — it's stopping a future bug from
       being *nondeterministic*: if invariant 1 ever breaks, which fragment of the split map
@@ -273,49 +340,50 @@ Still open from T0:
       accept `nodes[0]` with a comment saying why it's safe. Do **not** reach for `parentId` —
       it's `null` everywhere.
 - [ ] **6. Unreachable nodes vanish, and empty-map math produces garbage.** `20min`
-      The bare `return` at `Map.tsx:235` renders nothing for a null position (see
+      The bare `return` at `Map.tsx:241` renders nothing for a null position (see
       invariant 1). Add a guard, and either render orphans in a corner or at least
       `console.warn` them so it's not silent.
-      Also the reduce-over-empty cases: `Math.min(...[])` is `Infinity` (`Map.tsx:112`,
-      `:117`) **and** `Math.max(...[])` is `-Infinity` (`mapWidth` at `:168`, `mapHeight`
-      at `:177`). If every position is null you get a map sized `-Infinity`. Guard both
+      Also the reduce-over-empty cases: `Math.min(...[])` is `Infinity` (`Map.tsx:113`,
+      `:118`) **and** `Math.max(...[])` is `-Infinity` (`mapWidth` at `:174`, `mapHeight`
+      at `:183`). If every position is null you get a map sized `-Infinity`. Guard both
       directions, not just the `min` pair.
 - [x] **7. Every new node shares one `words` object.** ✅ Done — see the Done log.
 - [ ] **8. `oppositeDirections` is copy-pasted.** `5min` — identical map at
-      `nodesReducer.ts:4` and `Map.tsx:20`. Move it next to `LinkDirections` in `data.ts`.
-      `unlinkTargetNode` (`nodesReducer.ts:11`) is fine where it is — only the reducer uses it.
-- [ ] **9. Game rules are scattered.** `20min`
-      `LEVELS_REQUIRED_PER_LINK` in `Map.tsx:18`, `REQUIRED_WORDS_PER_LEVEL` in
-      `WordAdd.tsx:21`, and the `/ 3` breakpoint math inlined at `Map.tsx:309`. One
-      `rules.ts`. Cheap now, and it's what lets you tune the game later without a hunt.
+      `nodesReducer.ts:11` and `Map.tsx:21`. Move it next to `LinkDirections` in `data.ts`.
+      `unlinkTargetNode` (`nodesReducer.ts:18`) is fine where it is — only the reducer uses it.
+- [ ] **9. Game rules are scattered.** `20min` — half moved.
+      ✅ `REQUIRED_WORDS_PER_LEVEL` and `getNodeLevel` now sit together (`helpers.ts:23`,
+      `:29`), which is the right instinct but the wrong file — `helpers.ts` also holds
+      `createNode` and the `typedKeys`/`typedEntries` utilities.
+      Still scattered: `LEVELS_REQUIRED_PER_LINK` in `Map.tsx:19` and the `/ 3` breakpoint
+      math inlined at `Map.tsx:316` — see T2.2, that inline `3` and that constant are supposed
+      to be the same number, which is exactly the bug. One `rules.ts` holding both constants
+      plus `getNodeLevel`, and it's what lets you tune the game later without a hunt.
 - [ ] **10. The colour palette is defined three times.** `20min`
       `Map/styles.ts:8-13`, `SideMenu/styles.ts:3-12`, and `COLOUR_DARK` *again* at
       `App.tsx:15`. One `theme/colours.ts`. While you're there: `Theme.ts:53` hardcodes
       `color: 'white'` on `MuiInputBase`, fighting `palette.text.primary`.
-- [ ] **11. `<TextButton color={…}>` does nothing.** `5min` — `SideMenu.tsx:81` and `:84`
+- [ ] **11. `<TextButton color={…}>` does nothing.** `5min` — `SideMenu.tsx:88` and `:91`
       pass `color={COLOUR_LIGHT}`, but `TextButton` is a plain `styled("button")` that never
       reads it, so it leaks to the DOM as an attribute and styles nothing.
       Same class of bug: `NodeAddButton` in `Map/styles.ts` filters `"position"` in
       `shouldForwardProp`, but the prop is called `direction` — so `direction="N"` leaks
       through too.
 - [ ] **12. `DebugPanel` ships to users.** `5min` — it renders unconditionally at
-      `App.tsx:85`, fixed to the top-left corner. The "boop" button is gone; it now has real
+      `App.tsx:95`, fixed to the top-left corner. The "boop" button is gone; it now has real
       "Clear history" and "Use demo" buttons, so don't delete it — gate it behind
-      `import.meta.env.DEV`. That also drops `NODES_DEMO` (729 lines of `data.ts`) out of the
-      production bundle, which is most of the current 388 KB.
+      `import.meta.env.DEV`. That also drops `NODES_DEMO` (most of `data.ts`'s 725 lines) out
+      of the production bundle, which is most of the current 389 KB.
       While you're there: `DebugPanel` reaches into `storage` itself (`:6`) and pairs
-      `resetHistoryTo` with a raw `dispatchNodes`. It is correct **only** because `App.tsx:85`
+      `resetHistoryTo` with a raw `dispatchNodes`. It is correct **only** because `App.tsx:95`
       passes the non-logging dispatch. Pass the logging `dispatch` by mistake and you write
       the entire map into a log entry. A `loadNodes(nodes)` in `storage.ts` that resets the
       base and returns the nodes would make that unrepresentable.
-- [ ] **13. Autotranslate has no error path.** `20min` — `autoTranslate`
-      (`WordAdd.tsx:61`) fires 2×N parallel requests to `api.mymemory.translated.net`
-      (`:71`, `:80`) with no `catch`: a failed or rate-limited call just leaves the fields
-      blank with no message, and the anonymous quota there is small.
-      On the gibberish: MyMemory is a *translation-memory* API — it returns whatever humans
-      previously submitted, so single words come back weird. That's the API, not your code.
-      A real dictionary API is the actual fix, but do the error handling regardless so
-      failures stop looking like bugs in your own code.
+- [x] **13. Autotranslate has no error path.** ✅ Done — see the Done log, and **T5** for
+      the handful of structural things left in that component.
+      Still true and still not your code: MyMemory is a *translation-memory* API — it returns
+      whatever humans previously submitted, so single words come back weird. A real dictionary
+      API is the actual fix. Parked in T5.
 
 ---
 
@@ -366,23 +434,19 @@ The build is in the Done log; invariant 4 is the part to not break. What's left:
 
 ## T4 — Unfinished flows (smallest first)
 
-- [ ] **Wire up the Level up button.** `1h` — `WordAdd.tsx:198` has `disabled={!allFilled}`
-      and **no `onClick` at all**. Needs: lift the words to `App`, append to
-      `nodeInFocus.words`, `level + 1`, close the form. Do T2.1 first or you'll submit six
-      copies of the same noun. **This is the one that makes the game a game.**
-      Now cheap on the state side: it's one `edit` action with
-      `changes: {words, level}` — `NodeAction`'s `edit` payload already allows exactly those
-      two fields plus `title` (`nodesReducer.ts:45`) and nothing else, so it can't
-      accidentally touch `linkIds`. Also unblocks T2.3: without level-up, nothing can ever
-      reach level 3, so the branch gate can't be switched back on.
+- [x] **Wire up the Level up button.** ✅ Done — see the Done log. Landed as a dedicated
+      `addWords` action rather than the `edit` action this entry originally suggested, which
+      turned out to be the better call: an `edit` carrying `changes: {words}` would have had to
+      carry the whole merged array every time, i.e. a snapshot pretending to be a delta. See
+      invariant 4.
 - [ ] **Decide where example sentences go.** `20min` to decide, `1h` to build.
-      `examples` already exists on `WordType`, the demo data is full of them, and
-      `WordList.tsx:45` already renders them. Only `WordAdd` has no inputs. Cheapest version
+      `examples` already exists on `Word`, the demo data is full of them, and
+      `WordList.tsx` already renders them. Only `WordAdd` has no inputs. Cheapest version
       is one optional example row under each word line, and you're done.
-- [ ] **EDIT flow** `1h` — `SideMenu.tsx:84`, button renders and does nothing.
+- [ ] **EDIT flow** `1h` — `SideMenu.tsx:91`, button renders and does nothing.
 - [ ] **Delete a node** `1h` — **and this is where invariant 1 gets decided.**
       Right now only an *unnamed* new node can be dismissed (`onCancelNewNodeClick`,
-      `App.tsx:72`). `unlinkTargetNode` (`nodesReducer.ts:11`) is already written generically
+      `App.tsx:72`). `unlinkTargetNode` (`nodesReducer.ts:18`) is already written generically
       and does the hard part.
       **This is the commit where the leaf-only check stops being optional.** Invariant 1
       currently holds only because delete is exposed for untitled nodes alone, and an untitled
@@ -396,20 +460,31 @@ The build is in the Done log; invariant 4 is the part to not break. What's left:
       matches the game's premise. Cheap, and correct rather than a workaround. The
       alternative — laying out every disconnected component — is in Parked below.
       Also needs a confirm step, since a node holds real vocabulary.
-- [ ] **TRAIN flow** `deep` — `SideMenu.tsx:81`, renders and does nothing.
+- [ ] **TRAIN flow** `deep` — `SideMenu.tsx:88`, renders and does nothing.
       Scope it brutally small for v1: show a word in one language, reveal the other two on
       click, no scoring, no spaced repetition. Ship that, then iterate.
 - [ ] **Zoomable map** `deep` — a CSS `transform: scale()` on `MapContainer` plus a wheel
-      handler gets most of the way. `scrollToNode` (`Map.tsx:186`) needs the scale factored
-      into its arithmetic.
+      handler gets most of the way. `scrollToNode` needs the scale factored
+      into its arithmetic. `scrollToNode` is now at `Map.tsx:192`.
 - [ ] **Search: find a node by a word in it** `1h` — genuinely easy and satisfying. Filter
       `nodes` on `words[*].translations[*]`, then reuse the `scrollToNode` + focus machinery
       that already exists.
-- [ ] **Make the language list configurable** `1h` — `"english"`/`"swedish"`/`"french"` are
-      hardcoded in `WordAdd.tsx` (init, both fetch URLs, three inputs) and `WordList.tsx`,
-      even though the types are already open (`Record<string, string>`). A `LANGUAGES`
-      constant with `{ pivot, left, right }` would let you change what you're learning
-      without touching components.
+- [ ] **Make the language list configurable** `1h` — half done.
+      ✅ The *types* are real now: `Languages` and `Language` (`data.ts:1`, `:7`),
+      `Word.translations` is `Record<Language, string>`, and both components read through
+      `languageL`/`languageC`/`languageR` variables instead of literal keys — so a language
+      swap is a one-place change rather than a find-and-replace, and a typo is a type error.
+      What's left is that "one place" not existing yet: the triple is declared **twice**, at
+      `WordAdd.tsx:77` and `WordList.tsx:22`, rebuilt on every render, and `languageCode`
+      (`WordAdd.tsx:42`) is a third hardcoded mapping. Hoist to one
+      `{ pivot, left, right }` constant, then a settings UI has somewhere to write to.
+      One thing to not break: the annotation on `emptyTranslations` (`WordAdd.tsx:27`) is
+      load-bearing. Written as `as Record<Language, string>` instead, it would stop checking,
+      and adding a fourth language would silently produce words missing that field. Annotate,
+      don't assert — that's the same reason the remaining `as` casts in that file
+      (`:91`, `:99`, `:130`, `:172`) are worth a suspicious look if you ever touch them:
+      `Object.fromEntries` returns a wide type, so the cast is the *only* thing giving those
+      objects their shape.
 - [ ] **AI word / category suggestions** `deep` — after persistence and level-up. It's a
       nice-to-have on top of a working loop.
 - [ ] **Inner nodes (zoom into a node's own map)** `deep` — `innerNodeIds` exists, unused.
@@ -418,6 +493,88 @@ The build is in the Done log; invariant 4 is the part to not break. What's left:
       it's a tree of connected graphs, each obeying invariant 1, and
       `calculateAllPositions` gets called per scope with a different input set. No new layout
       logic. Park until the outer map is solid.
+
+---
+
+## T5 — `WordAdd` / autotranslate: what's left after four sittings
+
+Added 2026-09-26. **Nothing in this section is a visible bug.** The component works: type
+words, press AUTO, get translations, Save, watch the level go up. Offline it fails cleanly and
+logs. These are the structural things found while reviewing it, written down so they don't have
+to be rediscovered.
+
+**Read this before reopening the file.** `WordAdd` took four sittings and cost more motivation
+than it was worth. It is *finished enough*. Don't go back in to make it elegant. Go back in
+only if one of these bites for real, or when the T4 language work takes you in there anyway —
+and if you do, the first two items are the ones with teeth.
+
+- [ ] **The async write-back is correct only because the inputs are disabled.** `20min`
+      `setWords(() => wordsUpdated)` (`WordAdd.tsx:173`) takes a function, which *looks* like
+      the safe functional form, but it ignores the `prev` argument — and `wordsUpdated` is
+      built from the `words` captured before the `await` (`:141`, `:158`). So any change to
+      `words` made *during* the request gets silently reverted when the request lands. It is
+      exactly as stale as passing the value directly.
+      It can't happen today: all three inputs carry `disabled={isLoading}` (`:242`, `:260`,
+      `:273`) and AUTO carries `disabled={… || isLoading}` (`:214`), and those are the only two
+      callers of `setWords`. Verified by modelling it — with the guard removed, keystrokes
+      typed during the request vanish when the translations arrive.
+      Which means a `disabled` prop down in the render is load-bearing for the correctness of
+      an async write 130 lines above it, and nothing says so. The cheap insurance is to make
+      `setWords((prev) => …)` actually merge into `prev`, so the guard is the belt and the
+      update is the braces.
+      Smaller, same area: **Save** and **[x]** are *not* disabled while loading (`:294`,
+      `:297`). So mid-request you can still commit the untranslated words, or unmount the form.
+      The `setWords` on an unmounted component is a harmless no-op in React 19, but the
+      half-finished save is real.
+- [ ] **Two traversals walking in step, kept in step by a hand-rolled counter.** `20min`
+      `targets` is built by walking `Object.values(words)` (`:141`); the write-back walks
+      `typedKeys(words)` (`:158`) and re-derives the position with `let i = -1` and `++i`
+      (`:156`, `:161`). Alignment does hold — same object, and `Object.keys`/`Object.values`
+      agree on order — and it's verified end to end. But nothing *enforces* it, and the failure
+      mode is silent: if the two ever traverse differently, words quietly receive each other's
+      translations. Verified what that looks like — `grass` ends up with `to grow`'s French,
+      no error anywhere.
+      The fix isn't a better counter, it's not flattening: keep the
+      `Record<WordGroupsType, …>` shape through the fetch so the write-back can index
+      `[group][index]` and no counter exists to get out of step. Typechecks, roughly the same
+      line count.
+- [ ] **`translate` returns `any`, so nothing type-checks what reaches an input.** `5min`
+      `response.json()` is `any`, so `data?.responseData?.translatedText ?? ''` (`:58`) is
+      `any`, so `translationsL`/`translationsR` are `any[]` — verified by forcing TS to print
+      them. That is the one remaining route for a non-string to land in a controlled `value`,
+      which is precisely what the freeze below was. Annotate the return as `Promise<string>`,
+      and wrap the body in `String(…)` if you want the runtime guarantee too.
+      **The freeze, recorded because it cost an evening.** A failed translation used to become
+      `null`; `null` reached `value={…}`; and React's `updateInput` guards the DOM write with
+      `if (null != value)` — a *loose* check — so it skipped the write entirely and the input
+      kept showing `'...'` forever, with `isLoading` already back to `false`. Nothing was
+      hanging; the DOM had simply stopped being updated. React does warn about it, but behind a
+      module-level `didWarnValueNull` flag: **once per page load**, not once per input. Fixed
+      by returning `undefined` and falling back with `?? word.translations[language]`. Worth
+      being precise about why that worked: the **`??` fallback** is doing the work, not the
+      change of sentinel — `undefined` freezes an input exactly like `null` does, it just
+      doesn't even warn.
+- [ ] **A successful empty translation overwrites a word you typed.** `5min`
+      `translate` ends `?? ''` (`:58`), so "the API answered but had nothing" becomes a
+      *fulfilled* empty string. An empty string isn't nullish, so it wins the `??` at `:166`
+      and blanks the field. If that should behave like a failure — and it probably should — it
+      wants to `throw` instead, so `getPromiseValue` turns it into `undefined`.
+- [ ] **A total failure locks the retry.** `5min`
+      `setInputTouched(false)` (`:174`) runs on the failure path too, and
+      `enableAutoTranslation` (`:182`) requires `inputTouched` — so after an AUTO where
+      everything failed, the button is disabled and there's no way to try again without editing
+      a field first. Gate it on at least one translation having actually landed.
+- [ ] **`isWordComplete` tests for `''` specifically.** `5min`, and it's only a latent trap.
+      `!Object.values(word.translations).includes('')` (`:39`) is true for a word whose
+      translation is `null` or `undefined`, because neither equals `''`. Harmless as long as
+      the `??` fallbacks hold, which they do — but it's the same assumption ("a translation is
+      always a string") that the `any` above quietly breaks. `.every((v) => !!v)` costs
+      nothing.
+- [ ] **MyMemory is still the wrong API.** `deep`, and it's a decision rather than a fix.
+      It's a translation-*memory* service: it returns what humans previously submitted, so
+      single words come back odd. Never was your code. A real dictionary API is the fix; until
+      then the gibberish is expected behaviour, and the error handling above is what stops it
+      *looking* like a bug in your own code.
 
 ---
 
@@ -486,15 +643,31 @@ The build is in the Done log; invariant 4 is the part to not break. What's left:
 
 ## Suggested next session
 
-**T2.1**, the `WordAdd` state bug, then **T4 level-up**. That pair is what turns this from a
-map editor into a game, and it's the unblocker for everything downstream: nothing raises
-`level` today, so the branch gate (T2.3) can't be switched on, so branching can't be tuned,
-so T2.2's hint number can't be checked against real play. Do T2.1 first — until it's fixed,
-level-up submits six copies of the same noun.
+**Not `WordAdd`.** It works, T5 records what's left in it, and none of that is urgent. Four
+sittings in one component is enough — this paragraph exists so you don't have to re-decide that
+when you come back and see the open checkboxes.
 
-Then **uncomment the branch gate** (T2.3) and play with the numbers. That also restores
-condition 3 of invariant 1; see the invariants section for what's exposed while it's off.
+The loop closes now (add words → level up → node grows), so the next thing that changes how the
+game *feels* is branching, and it's cheap:
+
+**T2.3 — uncomment the branch gate.** `20min`. The blocker is gone; level-up landed. Two edits:
+swap `targetNode.level` for `getNodeLevel(targetNode)` at `Map.tsx:163` (it won't compile
+otherwise), then actually play it and see whether level 3 is a reasonable wait for a first
+branch — at the current constants that's 15 nouns, 6 verbs and 6 adjectives. If it isn't, tune
+`REQUIRED_WORDS_PER_LEVEL` (`helpers.ts:23`). This also clears all three lint errors and
+restores condition 3 of invariant 1, which is genuinely open while the gate is off.
+
+**T2.2 — the hint number.** `5min`, same sitting: the `[+]` promises "3" when the real
+requirement is 6, and you'll be staring straight at that while tuning.
+
+Then pick by appetite, not by order:
+- **T4 delete a node** `1h` — the next real flow, and the one that decides invariant 1. The
+  leaf-only check has to land in the same commit; the reasoning is already written up there.
+- **T4 search by word** `1h` — genuinely easy, immediately satisfying, touches nothing risky.
+  A good one for a low-energy evening.
+- **T4 examples in `WordAdd`** — only if you actually want to be back in that file.
 
 Cheap wins whenever you want one: T2.8 (`oppositeDirections`, `5min`), T2.12
-(`import.meta.env.DEV` on `DebugPanel`, `5min` and it cuts most of the bundle), the T3
-`getInitialState` empty-array fallback (`5min`), and the README, still the Vite template.
+(`import.meta.env.DEV` on `DebugPanel`, `5min`, and it cuts most of the 389 KB bundle), the T3
+`getInitialState` empty-array fallback (`5min`), and `README.md` — still the Vite template,
+though `PROJECT.md` now covers the "what is this" half of it.

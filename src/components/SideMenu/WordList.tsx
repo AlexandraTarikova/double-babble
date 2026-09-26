@@ -1,7 +1,7 @@
 import { Box } from '@mui/material';
 import type { FC } from 'react';
-import { typedEntries, WordGroups } from '../../data';
-import type { MapNode } from '../../data';
+import { Languages, WordGroups } from '../../data';
+import type { Language, MapNode } from '../../data';
 import {
   COLOUR_LANGUAGE_LEFT,
   COLOUR_LANGUAGE_RIGHT,
@@ -13,19 +13,25 @@ import {
   WordLine,
   WordTranslation,
 } from './styles';
+import { typedEntries } from '../../helpers';
 
 export const WordList: FC<{
   nodeInFocus: MapNode;
 }> = ({ nodeInFocus }) => {
   const totalAmount = Object.values(nodeInFocus.words).flat().length;
+  const [languageL, languageC, languageR]: Language[] = [
+    'french',
+    'english',
+    'swedish',
+  ];
 
   return (
     <>
       {totalAmount !== 0 && (
         <LanguagesHeader>
-          <span>French</span>
-          <span>English</span>
-          <span>Swedish</span>
+          <span>{Languages[languageL]}</span>
+          <span>{Languages[languageC]}</span>
+          <span>{Languages[languageR]}</span>
         </LanguagesHeader>
       )}
       {totalAmount === 0 ? (
@@ -44,30 +50,30 @@ export const WordList: FC<{
                 </WordGroupHeader>
                 {nodeInFocus.words[key].map((word) => (
                   <WordLine
-                    key={`${word.translations.english}_${word.translations.french}_${word.translations.swedish}`}
+                    key={`${word.translations[languageC]}_${word.translations[languageL]}_${word.translations[languageR]}`}
                   >
                     <Box>
                       <WordTranslation color={COLOUR_LANGUAGE_LEFT}>
-                        {word.translations.french}
+                        {word.translations[languageL]}
                       </WordTranslation>
-                      {word.examples?.french && (
-                        <WordExample>{word.examples.french}</WordExample>
+                      {word.examples?.[languageL] && (
+                        <WordExample>{word.examples[languageL]}</WordExample>
                       )}
                     </Box>
                     <Box>
                       <WordTranslation>
-                        {word.translations.english}
+                        {word.translations[languageC]}
                       </WordTranslation>
-                      {word.examples?.english && (
-                        <WordExample>{word.examples.english}</WordExample>
+                      {word.examples?.[languageC] && (
+                        <WordExample>{word.examples[languageC]}</WordExample>
                       )}
                     </Box>
                     <Box>
                       <WordTranslation color={COLOUR_LANGUAGE_RIGHT}>
-                        {word.translations.swedish}
+                        {word.translations[languageR]}
                       </WordTranslation>
-                      {word.examples?.swedish && (
-                        <WordExample>{word.examples.swedish}</WordExample>
+                      {word.examples?.[languageR] && (
+                        <WordExample>{word.examples[languageR]}</WordExample>
                       )}
                     </Box>
                   </WordLine>

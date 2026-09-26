@@ -1,5 +1,12 @@
-import type { LinkDirectionType, LinkIdsType, MapNode } from './data';
-import { LinkDirections } from './data';
+import type {
+  LinkDirectionType,
+  LinkIdsType,
+  MapNode,
+  WordGroupsType,
+  Word,
+} from './data';
+import { LinkDirections, WordGroups } from './data';
+import { typedKeys } from './helpers';
 
 const oppositeDirections: Record<LinkDirectionType, LinkDirectionType> = {
   N: 'S',
@@ -23,15 +30,16 @@ const unlinkTargetNode = (
 };
 
 export const NodeActionTypes = {
-  add: 'add',
+  addNode: 'addNode',
   edit: 'edit',
   delete: 'delete',
   set: 'set',
+  addWords: 'addWords',
 } as const;
 
 export type NodeAction =
   | {
-      type: 'add';
+      type: 'addNode';
       payload: {
         node: MapNode;
         targetNodeId: string;
@@ -42,16 +50,23 @@ export type NodeAction =
       type: 'edit';
       payload: {
         id: string;
-        changes: Partial<Pick<MapNode, 'title' | 'words' | 'level'>>;
+        changes: Partial<Pick<MapNode, 'title' | 'words'>>;
       };
     }
   | { type: 'delete'; payload: string }
-  | { type: 'set'; payload: MapNode[] };
+  | { type: 'set'; payload: MapNode[] }
+  | {
+      type: 'addWords';
+      payload: {
+        targetNodeId: string;
+        words: Record<WordGroupsType, Word[]>;
+      };
+    };
 
 export function nodesReducer(state: MapNode[], action: NodeAction): MapNode[] {
   const { type, payload } = action;
   switch (type) {
-    case NodeActionTypes.add: {
+    case NodeActionTypes.addNode: {
       const targetNode = state.find((node) => node.id === payload.targetNodeId);
       if (!targetNode) {
         console.error('add: target node not found: ', payload.targetNodeId);
@@ -75,6 +90,30 @@ export function nodesReducer(state: MapNode[], action: NodeAction): MapNode[] {
         node.id === targetNodeUpdated.id ? targetNodeUpdated : node,
       );
       return [...nodesUpdated, newNodeUpdated];
+    }
+    case NodeActionTypes.addWords: {
+      const targetNode = state.find((node) => node.id === payload.targetNodeId);
+      if (!targetNode) {
+        console.error(
+          'addWords: target node not found: ',
+          payload.targetNodeId,
+        );
+        return state;
+      }
+      const wordsUpdated = Object.fromEntries(
+        typedKeys(WordGroups).map((group) => [
+          group,
+          [...targetNode.words[group], ...payload.words[group]],
+        ]),
+      ) as Record<WordGroupsType, Word[]>;
+      const targetNodeUpdated: MapNode = {
+        ...targetNode,
+        words: wordsUpdated,
+      };
+      const nodesUpdated = state.map((node) =>
+        node.id === targetNodeUpdated.id ? targetNodeUpdated : node,
+      );
+      return nodesUpdated;
     }
     case NodeActionTypes.edit: {
       const nodesUpdated = state.map((node) =>

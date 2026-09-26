@@ -1,10 +1,14 @@
-export function typedEntries<T extends Record<string, unknown>>(obj: T) {
-  return Object.entries(obj) as [keyof T, T[keyof T]][];
-}
+export const Languages = {
+  swedish: 'Swedish',
+  english: 'English',
+  french: 'French',
+} as const;
 
-export type WordType = {
-  translations: Record<string, string>;
-  examples: Record<string, string>;
+export type Language = keyof typeof Languages;
+
+export type Word = {
+  translations: Record<Language, string>;
+  examples: Partial<Record<Language, string>>;
 };
 export const WordGroups = {
   nouns: 'Nouns',
@@ -25,14 +29,13 @@ export type LinkIdsType = {
 export type MapNode = {
   id: string;
   title: string;
-  level: number;
-  words: Record<WordGroupsType, WordType[]>;
+  words: Record<WordGroupsType, Word[]>;
   parentId: null | string;
   innerNodeIds: string[];
   linkIds: LinkIdsType;
 };
 
-const NOUNS_DEMO: WordType[] = [
+const NOUNS_DEMO: Word[] = [
   {
     translations: {
       english: 'grass',
@@ -107,7 +110,7 @@ const NOUNS_DEMO: WordType[] = [
   },
 ];
 
-const VERBS_DEMO: WordType[] = [
+const VERBS_DEMO: Word[] = [
   {
     translations: {
       english: 'to walk',
@@ -158,7 +161,7 @@ const VERBS_DEMO: WordType[] = [
   },
 ];
 
-const ADJECTIVES_DEMO: WordType[] = [
+const ADJECTIVES_DEMO: Word[] = [
   {
     translations: {
       english: 'green',
@@ -225,7 +228,6 @@ export const NODES_DEMO: MapNode[] = [
   {
     id: 'forest',
     title: 'Forest',
-    level: 15,
     words: {
       nouns: [
         {
@@ -426,7 +428,6 @@ export const NODES_DEMO: MapNode[] = [
   {
     id: 'mountains',
     title: 'Mountains',
-    level: 6,
     words: {
       nouns: NOUNS_DEMO,
       verbs: VERBS_DEMO,
@@ -444,7 +445,6 @@ export const NODES_DEMO: MapNode[] = [
   {
     id: 'village',
     title: 'Village',
-    level: 10,
     words: {
       nouns: [
         {
@@ -657,7 +657,6 @@ export const NODES_DEMO: MapNode[] = [
   {
     id: 'river',
     title: 'River',
-    level: 6,
     words: {
       nouns: NOUNS_DEMO,
       verbs: VERBS_DEMO,
@@ -675,7 +674,6 @@ export const NODES_DEMO: MapNode[] = [
   {
     id: 'sea',
     title: 'Sea',
-    level: 1,
     words: {
       nouns: NOUNS_DEMO,
       verbs: VERBS_DEMO,
@@ -693,7 +691,6 @@ export const NODES_DEMO: MapNode[] = [
   {
     id: 'road',
     title: 'Road',
-    level: 8,
     words: {
       nouns: NOUNS_DEMO,
       verbs: VERBS_DEMO,
@@ -711,7 +708,6 @@ export const NODES_DEMO: MapNode[] = [
   {
     id: 'castle',
     title: 'Castle',
-    level: 1,
     words: {
       nouns: NOUNS_DEMO,
       verbs: VERBS_DEMO,

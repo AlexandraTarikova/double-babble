@@ -14,6 +14,7 @@ import {
   NodeRoot,
   NodeTitle,
 } from './styles';
+import { getNodeLevel } from '../../helpers';
 
 const LEVELS_REQUIRED_PER_LINK = 3;
 
@@ -134,7 +135,9 @@ export const Map: FC<{
     [positions, minX, minY],
   );
 
-  const maxLevel = Math.max(...Object.values(nodes).map((node) => node.level));
+  const maxLevel = Math.max(
+    ...Object.values(nodes).map((node) => getNodeLevel(node)),
+  );
 
   const nodeClickHandler = (e: SyntheticEvent, targetNode: MapNode) => {
     onNodeClick(targetNode);
@@ -258,6 +261,7 @@ export const Map: FC<{
           const canExpandW = !Object.values(positionsNormalized).some(
             (position) => position.x === x - 1 && position.y === y,
           );
+          const level = getNodeLevel(node);
           return (
             <>
               {node.linkIds.S && (
@@ -301,7 +305,7 @@ export const Map: FC<{
                 muted={
                   nodeFocusedId !== null && !isFocused && !isLinkedToFocused
                 }
-                scale={mapToScale(node.level, 0, maxLevel)}
+                scale={mapToScale(level, 0, maxLevel)}
                 onClick={(e) => nodeClickHandler(e, node)}
               >
                 <NodeTitle>
@@ -309,14 +313,14 @@ export const Map: FC<{
                 </NodeTitle>
                 <NodeLevel
                   animated={nodeLevelPulsingId === node.id}
-                  closestBreakpoint={`${(Math.floor(node.level / 3) * 3 + 3).toString()}`}
+                  closestBreakpoint={`${(Math.floor(level / 3) * 3 + 3).toString()}`}
                   onAnimationEnd={() => {
                     if (nodeLevelPulsingId === node.id) {
                       setNodeLevelPulsingId(null);
                     }
                   }}
                 >
-                  <span>{node.level}</span>
+                  <span>{level}</span>
                 </NodeLevel>
                 {canExpandN && (
                   <NodeAddButton
