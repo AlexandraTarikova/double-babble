@@ -1,14 +1,12 @@
 import { Box } from '@mui/material';
 import { useState } from 'react';
 import type { FC } from 'react';
-import { Languages, WordGroups } from '../../data';
+import { WordGroups } from '../../data';
 import type { MapNode, WordGroupsType, Word, Language } from '../../data';
 import {
-  AutotranslateButton,
   ButtonsLine,
   COLOUR_LANGUAGE_LEFT,
   COLOUR_LANGUAGE_RIGHT,
-  LanguagesHeader,
   SubmitWordsButton,
   TextFieldWord,
   WordGroup,
@@ -16,13 +14,13 @@ import {
   WordLine,
   WordTranslation,
 } from './styles';
-import { RetroSpinner } from '../RetroSpinner';
 import {
   typedKeys,
   typedEntries,
   REQUIRED_WORDS_PER_LEVEL,
   getNodeLevel,
 } from '../../helpers';
+import { LanguageHeader } from './LanguageHeader';
 
 const emptyTranslations: Record<Language, string> = {
   french: '',
@@ -206,25 +204,11 @@ export const WordAdd: FC<{
 
   return (
     <>
-      <LanguagesHeader>
-        <span>{Languages[languageL]}</span>
-        <span>
-          {Languages[languageC]}{' '}
-          <AutotranslateButton
-            disabled={!enableAutoTranslation || isLoading}
-            onClick={autoTranslate}
-          >
-            {isLoading ? (
-              <>
-                [AUTO <RetroSpinner />]
-              </>
-            ) : (
-              '[AUTO]'
-            )}
-          </AutotranslateButton>
-        </span>
-        <span>{Languages[languageR]}</span>
-      </LanguagesHeader>
+      <LanguageHeader
+        onButtonClick={autoTranslate}
+        disabled={enableAutoTranslation}
+        loading={isLoading}
+      />
       {typedEntries(WordGroups).map(([key, label]) => {
         const wordsInGroup = words[key];
         return (

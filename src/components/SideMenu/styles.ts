@@ -24,7 +24,7 @@ export const TextButton = styled('button', {
   },
 }));
 
-export const LanguagesHeader = styled(Box)({
+export const LanguageHeaderRoot = styled(Box)({
   width: '100%',
   fontSize: '24px',
   marginTop: '32px',

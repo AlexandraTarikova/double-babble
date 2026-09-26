@@ -1,11 +1,10 @@
 import { Box } from '@mui/material';
 import type { FC } from 'react';
-import { Languages, WordGroups } from '../../data';
+import { WordGroups } from '../../data';
 import type { Language, MapNode } from '../../data';
 import {
   COLOUR_LANGUAGE_LEFT,
   COLOUR_LANGUAGE_RIGHT,
-  LanguagesHeader,
   NoWordsHint,
   WordExample,
   WordGroup,
@@ -14,6 +13,7 @@ import {
   WordTranslation,
 } from './styles';
 import { typedEntries } from '../../helpers';
+import { LanguageHeader } from './LanguageHeader';
 
 export const WordList: FC<{
   nodeInFocus: MapNode;
@@ -27,13 +27,7 @@ export const WordList: FC<{
 
   return (
     <>
-      {totalAmount !== 0 && (
-        <LanguagesHeader>
-          <span>{Languages[languageL]}</span>
-          <span>{Languages[languageC]}</span>
-          <span>{Languages[languageR]}</span>
-        </LanguagesHeader>
-      )}
+      {totalAmount !== 0 && <LanguageHeader />}
       {totalAmount === 0 ? (
         <NoWordsHint>
           Click the [+] button to level up and add words
