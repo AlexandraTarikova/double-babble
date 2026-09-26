@@ -1,3 +1,12 @@
+# My own notes
+
+TODO: add checking work uniqueness when adding new ones - remember to allow repeats if 
+different categories
+
+----
+
+# Claude notes
+
 # Double Babble — resume checklist
 
 Written 2026-08-13 after a few months away. Updated 2026-09-26.

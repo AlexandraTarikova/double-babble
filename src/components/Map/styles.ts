@@ -1,16 +1,16 @@
 import { styled, Box, keyframes } from '@mui/material';
 import type { LinkDirectionType } from '../../data';
+import {
+  COLOUR_DARK,
+  COLOUR_FOCUS,
+  COLOUR_HIGHLIGHT,
+  COLOUR_LIGHT,
+  COLOUR_MUTED,
+} from '../SideMenu/styles';
 
 export const NODE_WIDTH = 150;
 export const NODE_HEIGHT = 80;
 export const NODE_SPACE = 60;
-
-export const COLOUR_LIGHT = '#D5B9B2';
-export const COLOUR_DARK = '#361C2E';
-export const COLOUR_DARK_MUTED = '#42283a';
-export const COLOUR_HIGHLIGHT = '#F3DE2C';
-export const COLOUR_FOCUS = '#FFF';
-export const COLOUR_MUTED = '#765B63';
 
 export const MapZone = styled(Box)({
   width: '100%',

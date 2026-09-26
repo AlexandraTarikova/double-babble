@@ -3,11 +3,11 @@ import type { MapNode, WordGroupsType, Word } from '../../data';
 import { WordList } from './WordList';
 import {
   ActionsPanel,
-  COLOUR_LIGHT,
   LevelUpButton,
   MenuHeader,
   MenuNodeLevel,
   MenuZone,
+  ModePanel,
   NewTitleWrapper,
   TextButton,
   TextFieldStyled,
@@ -62,6 +62,11 @@ export const SideMenu: FC<{
       <MenuHeader>
         {hasTitle && (
           <>
+            <ModePanel>
+              <TextButton focused={true}>[WORDS]</TextButton>
+              {level > 0 && <TextButton>[TRAIN]</TextButton>}
+              <TextButton>[EDIT]</TextButton>
+            </ModePanel>
             <Box
               display={'flex'}
               justifyContent={'center'}
@@ -85,11 +90,8 @@ export const SideMenu: FC<{
             </MenuNodeLevel>
             {totalAmount !== 0 && (
               <ActionsPanel>
-                <TextButton color={COLOUR_LIGHT} disabled={levelUpInProgress}>
-                  {'->'}TRAIN{'<-'}
-                </TextButton>
-                <TextButton color={COLOUR_LIGHT} disabled={levelUpInProgress}>
-                  EDIT
+                <TextButton disabled={levelUpInProgress}>
+                  {'+> '}ZOOM{' <+'}
                 </TextButton>
               </ActionsPanel>
             )}

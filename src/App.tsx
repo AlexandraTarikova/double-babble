@@ -11,8 +11,7 @@ import { createNode } from './helpers';
 import { getInitialState, saveAction } from './storage';
 import { useReducer } from 'react';
 import { NodeActionTypes, nodesReducer, type NodeAction } from './nodesReducer';
-
-const COLOUR_DARK = '#361C2E';
+import { COLOUR_DARK } from './components/SideMenu/styles';
 
 const RootZone = styled(Box)({
   minWidth: '100vw',

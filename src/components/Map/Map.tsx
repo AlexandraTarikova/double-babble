@@ -156,15 +156,14 @@ export const Map: FC<{
       (id) => id !== null,
     ).length;
     e.stopPropagation();
-    // TODO: uncomment later
-    // disabled for easier feature testing while VIP
 
-    // if (
-    //   linksAmount >= Math.floor(targetNode.level / LEVELS_REQUIRED_PER_LINK)
-    // ) {
-    //   handleDisabledClick(targetNode.id);
-    //   return;
-    // }
+    if (
+      linksAmount >=
+      Math.floor(getNodeLevel(targetNode) / LEVELS_REQUIRED_PER_LINK)
+    ) {
+      handleDisabledClick(targetNode.id);
+      return;
+    }
     onAddNodeClick(targetNode, direction);
     scrollToNode(targetNode.id);
     setNodeLevelPulsingId(null);

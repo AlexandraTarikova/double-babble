@@ -11,6 +11,19 @@ export const COLOUR_LANGUAGE_LEFT = '#FF7070';
 export const COLOUR_LANGUAGE_CENTER = '#FFF';
 export const COLOUR_LANGUAGE_RIGHT = '#629FD0';
 
+export const TextButton = styled('button', {
+  shouldForwardProp: (propName) => propName !== 'focused',
+})<{ focused?: boolean }>(({ focused = false }) => ({
+  cursor: 'pointer',
+  color: focused ? COLOUR_LIGHT : COLOUR_MUTED,
+  '&:not(:disabled):hover': {
+    color: COLOUR_FOCUS,
+  },
+  '&:disabled': {
+    color: COLOUR_DARK_MUTED,
+  },
+}));
+
 export const LanguagesHeader = styled(Box)({
   width: '100%',
   fontSize: '24px',
@@ -105,10 +118,12 @@ export const MenuZone = styled(Box)({
   minWidth: '60%',
   position: 'relative',
   background: COLOUR_DARK,
-  padding: '40px',
+  // padding: '40px',
+  padding: '8px 40px 40px 40px',
   borderLeft: `1px solid ${COLOUR_DARK_MUTED}`,
   maxHeight: '100vh',
-  overflow: 'auto',
+  overflowY: 'auto',
+  overflowX: 'visible',
 
   scrollbarWidth: 'thin',
   scrollbarColor: 'transparent transparent',
@@ -145,6 +160,25 @@ export const MenuZone = styled(Box)({
     background: 'transparent',
   },
 });
+export const ModePanel = styled(Box)({
+  display: 'flex',
+  justifyContent: 'center',
+  alignItems: 'center',
+  color: COLOUR_MUTED,
+  gap: '24px',
+  fontSize: '16px',
+  marginBottom: '12px',
+});
+export const ModeButton = styled(TextButton)({
+  display: 'flex',
+  justifyContent: 'center',
+  alignItems: 'center',
+  color: COLOUR_MUTED,
+  gap: '24px',
+  fontSize: '16px',
+  marginBottom: '12px',
+});
+
 export const MenuHeader = styled(Box)({
   width: '100%',
   fontSize: '32px',
@@ -278,16 +312,5 @@ export const ActionsPanel = styled(Box)({
   },
   '&>button:nth-child(2)': {
     fontSize: '12px',
-  },
-});
-
-export const TextButton = styled('button')({
-  cursor: 'pointer',
-  '&:hover': {
-    color: COLOUR_FOCUS,
-  },
-  '&:disabled': {
-    color: COLOUR_MUTED,
-    pointerEvents: 'none',
   },
 });
