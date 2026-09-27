@@ -206,7 +206,7 @@ export const WordAdd: FC<{
     <>
       <LanguageHeader
         onButtonClick={autoTranslate}
-        disabled={enableAutoTranslation}
+        disabled={!enableAutoTranslation}
         loading={isLoading}
       />
       {typedEntries(WordGroups).map(([key, label]) => {

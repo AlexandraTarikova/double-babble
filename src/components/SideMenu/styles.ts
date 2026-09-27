@@ -160,7 +160,9 @@ export const MenuZone = styled(Box)({
     background: 'transparent',
   },
 });
-export const ModePanel = styled(Box)({
+export const ModePanel = styled(Box, {
+  shouldForwardProp: (propName) => propName !== 'hidden',
+})<{ hidden?: boolean }>(({ hidden = false }) => ({
   display: 'flex',
   justifyContent: 'center',
   alignItems: 'center',
@@ -168,7 +170,8 @@ export const ModePanel = styled(Box)({
   gap: '24px',
   fontSize: '16px',
   marginBottom: '12px',
-});
+  visibility: hidden ? 'hidden' : 'visible',
+}));
 export const ModeButton = styled(TextButton)({
   display: 'flex',
   justifyContent: 'center',
@@ -304,9 +307,11 @@ export const ActionsPanel = styled(Box)({
   display: 'flex',
   justifyContent: 'center',
   flexDirection: 'column',
+  alignItems: 'center',
   gap: '12px',
   marginTop: '16px',
   color: COLOUR_LIGHT,
+
   '&>button:nth-child(1)': {
     fontSize: '16px',
   },
