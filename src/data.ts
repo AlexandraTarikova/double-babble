@@ -18,6 +18,8 @@ export const WordGroups = {
 
 export type WordGroupsType = keyof typeof WordGroups;
 
+export type WordStrengthList = Record<string, number>;
+
 export const LinkDirections = ['N', 'E', 'S', 'W'] as const;
 
 export type LinkDirectionType = (typeof LinkDirections)[number];

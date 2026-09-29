@@ -12,8 +12,18 @@ import { getNodeLevel } from '../../helpers';
 export const TitleBlock: FC<{
   nodeInFocus: MapNode;
   levelUpInProgress: boolean;
+  mode: string;
   setLevelUpInProgress: (value: boolean) => void;
-}> = ({ nodeInFocus, levelUpInProgress, setLevelUpInProgress }) => {
+  onZoomClick: () => void;
+  onResetClick: () => void;
+}> = ({
+  nodeInFocus,
+  levelUpInProgress,
+  mode,
+  setLevelUpInProgress,
+  onZoomClick,
+  onResetClick,
+}) => {
   const totalAmount = Object.values(nodeInFocus.words).flat().length;
 
   const level = getNodeLevel(nodeInFocus);
@@ -35,6 +45,7 @@ export const TitleBlock: FC<{
         ) : (
           <LevelUpButton
             animated={totalAmount === 0}
+            disabled={mode === 'train'}
             onClick={() => setLevelUpInProgress(true)}
           >
             <TextButton>[+]</TextButton>
@@ -43,9 +54,16 @@ export const TitleBlock: FC<{
       </MenuNodeLevel>
       {totalAmount !== 0 && (
         <ActionsPanel>
-          <TextButton disabled={levelUpInProgress}>
-            {'+> '}ZOOM{' <+'}
-          </TextButton>
+          {mode === 'words' && (
+            <TextButton disabled={levelUpInProgress} onClick={onZoomClick}>
+              {'+> '}ZOOM{' <+'}
+            </TextButton>
+          )}
+          {mode === 'train' && (
+            <TextButton disabled={levelUpInProgress} onClick={onResetClick}>
+              ~ RESET ~
+            </TextButton>
+          )}
         </ActionsPanel>
       )}
     </>

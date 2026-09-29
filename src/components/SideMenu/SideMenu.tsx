@@ -7,6 +7,7 @@ import type { FC } from 'react';
 import { getNodeLevel } from '../../helpers';
 import { NewTitle } from './NewTitle';
 import { TitleBlock } from './TitleBlock';
+import { TrainMode } from './TrainMode';
 
 export const SideMenu: FC<{
   nodeInFocus: MapNode;
@@ -19,6 +20,7 @@ export const SideMenu: FC<{
 }> = ({ nodeInFocus, onNodeRename, onCancelClick, onAddWords }) => {
   const hasTitle = nodeInFocus?.title !== '';
   const [mode, setMode] = useState(() => (hasTitle ? 'words' : 'initial'));
+  const [trainingKey, setTrainingKey] = useState(0);
 
   const [levelUpInProgress, setLevelUpInProgress] = useState(false);
 
@@ -31,12 +33,32 @@ export const SideMenu: FC<{
 
   const level = getNodeLevel(nodeInFocus);
 
+  const onZoomClick = () => {
+    //WIP
+  };
+
+  const onResetTrainingClick = () => {
+    setTrainingKey((prev) => prev + 1);
+  };
+
   return (
     <MenuZone>
       <MenuHeader>
         <ModePanel hidden={mode === 'initial'}>
-          <TextButton focused={true}>[WORDS]</TextButton>
-          {level > 0 && <TextButton>[TRAIN]</TextButton>}
+          <TextButton
+            active={mode === 'words'}
+            onClick={() => setMode('words')}
+          >
+            [WORDS]
+          </TextButton>
+          {level > 0 && (
+            <TextButton
+              active={mode === 'train'}
+              onClick={() => setMode('train')}
+            >
+              [TRAIN]
+            </TextButton>
+          )}
           <TextButton>[EDIT]</TextButton>
         </ModePanel>
         {hasTitle && (
@@ -44,6 +66,9 @@ export const SideMenu: FC<{
             levelUpInProgress={levelUpInProgress}
             setLevelUpInProgress={setLevelUpInProgress}
             nodeInFocus={nodeInFocus}
+            mode={mode}
+            onZoomClick={onZoomClick}
+            onResetClick={onResetTrainingClick}
           />
         )}
         {!hasTitle && (
@@ -62,6 +87,9 @@ export const SideMenu: FC<{
           goBack={() => setLevelUpInProgress(false)}
           onAddWords={onAddWords}
         />
+      )}
+      {mode === 'train' && (
+        <TrainMode nodeInFocus={nodeInFocus} key={trainingKey} />
       )}
     </MenuZone>
   );

@@ -1,4 +1,5 @@
 import { Box, keyframes, styled, TextField } from '@mui/material';
+import type { Language } from '../../data';
 
 export const COLOUR_LIGHT = '#D5B9B2';
 export const COLOUR_DARK = '#361C2E';
@@ -11,11 +12,16 @@ export const COLOUR_LANGUAGE_LEFT = '#FF7070';
 export const COLOUR_LANGUAGE_CENTER = '#FFF';
 export const COLOUR_LANGUAGE_RIGHT = '#629FD0';
 
+export const languageColors: Partial<Record<Language, string>> = {
+  french: COLOUR_LANGUAGE_LEFT,
+  swedish: COLOUR_LANGUAGE_RIGHT,
+};
+
 export const TextButton = styled('button', {
-  shouldForwardProp: (propName) => propName !== 'focused',
-})<{ focused?: boolean }>(({ focused = false }) => ({
+  shouldForwardProp: (propName) => propName !== 'active',
+})<{ active?: boolean }>(({ active = false }) => ({
   cursor: 'pointer',
-  color: focused ? COLOUR_LIGHT : COLOUR_MUTED,
+  color: active ? COLOUR_LIGHT : COLOUR_MUTED,
   '&:not(:disabled):hover': {
     color: COLOUR_FOCUS,
   },
@@ -194,7 +200,7 @@ export const MenuNodeLevel = styled(Box)({
   fontSize: '12px',
 });
 
-export const LevelUpButton = styled(Box, {
+export const LevelUpButton = styled('button', {
   shouldForwardProp: (propName) => propName !== 'animated',
 })<{ animated: boolean }>(({ animated }) => ({
   animation: animated ? `${pulse} .6s infinite` : 'none',

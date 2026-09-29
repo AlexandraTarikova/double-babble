@@ -8,7 +8,7 @@ import { DebugPanel } from './components/DebugPanel';
 
 import type { LinkDirectionType, MapNode, WordGroupsType, Word } from './data';
 import { createNode } from './helpers';
-import { getInitialState, saveAction } from './storage';
+import { getInitialState, saveAction } from './storageHistory';
 import { useReducer } from 'react';
 import { NodeActionTypes, nodesReducer, type NodeAction } from './nodesReducer';
 import { COLOUR_DARK } from './components/SideMenu/styles';

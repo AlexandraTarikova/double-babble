@@ -3,7 +3,7 @@ import type { FC, ActionDispatch } from 'react';
 import { COLOUR_LIGHT } from './SideMenu/styles';
 import { NODES_DEMO } from '../data';
 import type { NodeAction } from '../nodesReducer';
-import { resetHistoryTo } from '../storage';
+import { resetHistoryTo } from '../storageHistory';
 import { createEmptyMap } from '../helpers';
 
 export const DebugButton = styled('button')({
