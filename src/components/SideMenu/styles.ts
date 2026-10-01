@@ -20,13 +20,13 @@ export const languageColors: Partial<Record<Language, string>> = {
 export const TextButton = styled('button', {
   shouldForwardProp: (propName) => propName !== 'active',
 })<{ active?: boolean }>(({ active = false }) => ({
-  cursor: 'pointer',
   color: active ? COLOUR_LIGHT : COLOUR_MUTED,
   '&:not(:disabled):hover': {
     color: COLOUR_FOCUS,
   },
   '&:disabled': {
     color: COLOUR_DARK_MUTED,
+    cursor: 'default',
   },
 }));
 
@@ -200,7 +200,7 @@ export const MenuNodeLevel = styled(Box)({
   fontSize: '12px',
 });
 
-export const LevelUpButton = styled('button', {
+export const LevelUpButton = styled(Box, {
   shouldForwardProp: (propName) => propName !== 'animated',
 })<{ animated: boolean }>(({ animated }) => ({
   animation: animated ? `${pulse} .6s infinite` : 'none',
@@ -245,6 +245,9 @@ export const TextFieldWord = styled(TextField)({
     color: 'inherit',
     fontSize: '16px',
     fontFamily: 'inherit',
+    '&.Mui-disabled': {
+      WebkitTextFillColor: 'inherit',
+    },
   },
   '& .MuiInputBase-root': {
     color: 'inherit',
@@ -261,6 +264,9 @@ export const TextFieldWord = styled(TextField)({
 
     '&:after': {
       borderBottomColor: COLOUR_DARK_MUTED,
+    },
+    '&.Mui-disabled': {
+      color: 'inherit',
     },
   },
   marginRight: '40px',
@@ -310,18 +316,30 @@ export const AutotranslateButton = styled('button')({
 });
 
 export const ActionsPanel = styled(Box)({
+  position: 'relative',
   display: 'flex',
   justifyContent: 'center',
-  flexDirection: 'column',
   alignItems: 'center',
   gap: '12px',
   marginTop: '16px',
   color: COLOUR_LIGHT,
-
-  '&>button:nth-child(1)': {
-    fontSize: '16px',
-  },
-  '&>button:nth-child(2)': {
-    fontSize: '12px',
-  },
+  fontFamily: '"Press Start 2P", system-ui',
 });
+
+export const TrainingIndicatorLine = styled(Box)({
+  position: 'relative',
+  top: '-6px',
+  height: '21px',
+});
+
+export const TrainingIndicator = styled('span', {
+  shouldForwardProp: (propName) => propName !== 'value',
+})<{ value: null | number }>(({ value }) => ({
+  color: value === 1 ? COLOUR_FOCUS : COLOUR_MUTED,
+  position: 'relative',
+  marginRight: '2px',
+  display: 'inline-block',
+  verticalAlign: 'middle',
+  fontWeight: value === null ? 'bold' : 'normal',
+  fontSize: '16px',
+}));

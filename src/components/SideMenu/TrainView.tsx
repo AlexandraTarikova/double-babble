@@ -1,8 +1,15 @@
 import { Box, styled } from '@mui/material';
 import { useState, type FC } from 'react';
-import { WordGroups } from '../../data';
-import type { Language, MapNode, Word, WordGroupsType } from '../../data';
+import { languageC, languageL, languageR, WordGroups } from '../../data';
+import type {
+  Language,
+  MapNode,
+  Word,
+  WordGroupsType,
+  WordStrengthList,
+} from '../../data';
 import {
+  ActionsPanel,
   COLOUR_FOCUS,
   languageColors,
   TextButton,
@@ -12,7 +19,7 @@ import {
   WordLine,
   WordTranslation,
 } from './styles';
-import { typedEntries } from '../../helpers';
+import { getWordKey, typedEntries } from '../../helpers';
 import { LanguageHeader } from './LanguageHeader';
 import {
   getWordStrengthList,
@@ -40,13 +47,8 @@ const isSameEntry = (a: EntryId, b: EntryId) =>
 
 export const TrainMode: FC<{
   nodeInFocus: MapNode;
-}> = ({ nodeInFocus }) => {
-  const [languageL, languageC, languageR]: Language[] = [
-    'french',
-    'english',
-    'swedish',
-  ];
-
+  onResetClick: () => void;
+}> = ({ nodeInFocus, onResetClick }) => {
   const [words, setWords] = useState(
     Object.fromEntries(
       typedEntries(nodeInFocus.words).map(([key, value]) => [
@@ -79,12 +81,17 @@ export const TrainMode: FC<{
     group: WordGroupsType,
     word: string,
     language: Language,
-    offset: number,
+    value: number,
   ) => {
-    const key = `${group}_${language}_${word}`;
-    const updatedList = {
+    const key = getWordKey({ group, word, to: language, from: languageC });
+    const current = wordStrengthList[key];
+
+    const updatedList: WordStrengthList = {
       ...wordStrengthList,
-      [key]: (wordStrengthList[key] ?? 0) + offset,
+      [key]: {
+        results: [...(current?.results ?? []), value],
+        lastCheck: new Date(),
+      },
     };
     saveWordStrengthList(updatedList);
     setEvaluationPending(null);
@@ -92,6 +99,9 @@ export const TrainMode: FC<{
 
   return (
     <>
+      <ActionsPanel>
+        <TextButton onClick={onResetClick}>~ RESET ~</TextButton>
+      </ActionsPanel>
       <LanguageHeader />
       {typedEntries(WordGroups).map(
         ([group, label]) =>
@@ -127,45 +137,25 @@ export const TrainMode: FC<{
                             language: language,
                           }) && (
                             <>
-                              <TextButton
-                                active
-                                onClick={() =>
-                                  onSelfEvaluationClick(
-                                    group,
-                                    word.translations[language],
-                                    language,
-                                    1,
-                                  )
-                                }
-                              >
-                                [✔]
-                              </TextButton>
-                              <TextButton
-                                active
-                                onClick={() =>
-                                  onSelfEvaluationClick(
-                                    group,
-                                    word.translations[language],
-                                    language,
-                                    -1,
-                                  )
-                                }
-                              >
-                                [~]
-                              </TextButton>
-                              <TextButton
-                                active
-                                onClick={() =>
-                                  onSelfEvaluationClick(
-                                    group,
-                                    word.translations[language],
-                                    language,
-                                    -2,
-                                  )
-                                }
-                              >
-                                [x]
-                              </TextButton>
+                              {[
+                                { label: '[✔]', delta: 1 },
+                                { label: '[~]', delta: 0 },
+                                { label: '[x]', delta: -1 },
+                              ].map(({ label, delta }) => (
+                                <TextButton
+                                  active
+                                  onClick={() =>
+                                    onSelfEvaluationClick(
+                                      group,
+                                      word.translations[language],
+                                      language,
+                                      delta,
+                                    )
+                                  }
+                                >
+                                  {label}
+                                </TextButton>
+                              ))}
                             </>
                           )}
                       </WordTranslation>

@@ -1,4 +1,9 @@
-import { WordGroups, type MapNode, type WordGroupsType } from './data';
+import {
+  WordGroups,
+  type Language,
+  type MapNode,
+  type WordGroupsType,
+} from './data';
 
 export function createNode(): MapNode {
   return {
@@ -46,4 +51,18 @@ export function typedKeys<T extends object>(object: T) {
 
 export function typedEntries<T extends Record<string, unknown>>(obj: T) {
   return Object.entries(obj) as [keyof T, T[keyof T]][];
+}
+
+export function getWordKey({
+  word,
+  group,
+  from,
+  to,
+}: {
+  word: string;
+  group: WordGroupsType;
+  from: Language;
+  to: Language;
+}) {
+  return `${group}__from-${from}-to-${to}__${word}`;
 }

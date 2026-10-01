@@ -30,3 +30,11 @@ export const getWordStrengthList = () => {
 export const saveWordStrengthList = (newState: WordStrengthList) => {
   localStorage.setItem(KEY, JSON.stringify(newState));
 };
+
+export const setWordStrengthList = (newState?: WordStrengthList) => {
+  if (newState) {
+    localStorage.setItem(KEY, JSON.stringify(newState));
+  } else {
+    localStorage.removeItem(KEY);
+  }
+};

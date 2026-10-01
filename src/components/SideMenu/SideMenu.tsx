@@ -1,5 +1,10 @@
 import { useState } from 'react';
-import type { MapNode, WordGroupsType, Word } from '../../data';
+import {
+  type MapNode,
+  type WordGroupsType,
+  type Word,
+  SideMenuMode,
+} from '../../data';
 import { WordList } from './WordList';
 import { MenuHeader, MenuZone, ModePanel, TextButton } from './styles';
 import { WordAdd } from './WordAdd';
@@ -7,7 +12,8 @@ import type { FC } from 'react';
 import { getNodeLevel } from '../../helpers';
 import { NewTitle } from './NewTitle';
 import { TitleBlock } from './TitleBlock';
-import { TrainMode } from './TrainMode';
+import { TrainMode } from './TrainView';
+import { ProgressView } from './ProgressView';
 
 export const SideMenu: FC<{
   nodeInFocus: MapNode;
@@ -19,10 +25,10 @@ export const SideMenu: FC<{
   ) => void;
 }> = ({ nodeInFocus, onNodeRename, onCancelClick, onAddWords }) => {
   const hasTitle = nodeInFocus?.title !== '';
-  const [mode, setMode] = useState(() => (hasTitle ? 'words' : 'initial'));
+  const [mode, setMode] = useState<SideMenuMode>(() =>
+    hasTitle ? 'words' : 'initial',
+  );
   const [trainingKey, setTrainingKey] = useState(0);
-
-  const [levelUpInProgress, setLevelUpInProgress] = useState(false);
 
   const onSubmitTitle = (newName: string) => {
     onNodeRename(newName);
@@ -41,35 +47,43 @@ export const SideMenu: FC<{
     setTrainingKey((prev) => prev + 1);
   };
 
+  const onModeButtonClick = (newMode: SideMenuMode) => {
+    if (mode === 'levelUp') {
+      return;
+    }
+    setMode(newMode);
+  };
+
   return (
     <MenuZone>
       <MenuHeader>
         <ModePanel hidden={mode === 'initial'}>
           <TextButton
-            active={mode === 'words'}
-            onClick={() => setMode('words')}
+            active={mode === 'words' || mode === 'levelUp'}
+            onClick={() => onModeButtonClick('words')}
           >
             [WORDS]
           </TextButton>
           {level > 0 && (
             <TextButton
+              disabled={mode === 'levelUp'}
               active={mode === 'train'}
-              onClick={() => setMode('train')}
+              onClick={() => onModeButtonClick('train')}
             >
               [TRAIN]
             </TextButton>
           )}
-          <TextButton>[EDIT]</TextButton>
+          <TextButton
+            disabled={mode === 'levelUp'}
+            active={mode === 'progress'}
+            onClick={() => onModeButtonClick('progress')}
+          >
+            [PROGRESS]
+          </TextButton>
+          <TextButton disabled={mode === 'levelUp'}>[EDIT]</TextButton>
         </ModePanel>
         {hasTitle && (
-          <TitleBlock
-            levelUpInProgress={levelUpInProgress}
-            setLevelUpInProgress={setLevelUpInProgress}
-            nodeInFocus={nodeInFocus}
-            mode={mode}
-            onZoomClick={onZoomClick}
-            onResetClick={onResetTrainingClick}
-          />
+          <TitleBlock setMode={setMode} nodeInFocus={nodeInFocus} mode={mode} />
         )}
         {!hasTitle && (
           <NewTitle
@@ -78,18 +92,25 @@ export const SideMenu: FC<{
           />
         )}
       </MenuHeader>
-      {mode === 'words' && !levelUpInProgress && (
-        <WordList nodeInFocus={nodeInFocus} />
+      {mode === 'words' && (
+        <WordList nodeInFocus={nodeInFocus} onZoomClick={onZoomClick} />
       )}
-      {mode === 'words' && levelUpInProgress && (
+      {mode === 'levelUp' && (
         <WordAdd
           nodeInFocus={nodeInFocus}
-          goBack={() => setLevelUpInProgress(false)}
+          goBack={() => setMode('words')}
           onAddWords={onAddWords}
         />
       )}
       {mode === 'train' && (
-        <TrainMode nodeInFocus={nodeInFocus} key={trainingKey} />
+        <TrainMode
+          nodeInFocus={nodeInFocus}
+          key={trainingKey}
+          onResetClick={onResetTrainingClick}
+        />
+      )}
+      {mode === 'progress' && (
+        <ProgressView nodeInFocus={nodeInFocus} onZoomClick={onZoomClick} />
       )}
     </MenuZone>
   );

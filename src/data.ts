@@ -1,3 +1,20 @@
+export const SideMenuMode = {
+  initial: '',
+  words: 'Words',
+  levelUp: '',
+  train: 'Train',
+  edit: 'Edit',
+  progress: 'Progress',
+} as const;
+export type SideMenuMode = keyof typeof SideMenuMode;
+
+export const ProgressMode = {
+  general: 'general',
+  errors: 'errors',
+  time: 'time,',
+} as const;
+export type ProgressMode = keyof typeof ProgressMode;
+
 export const Languages = {
   swedish: 'Swedish',
   english: 'English',
@@ -18,7 +35,11 @@ export const WordGroups = {
 
 export type WordGroupsType = keyof typeof WordGroups;
 
-export type WordStrengthList = Record<string, number>;
+export type WordStrength = {
+  results: number[];
+  lastCheck: Date;
+};
+export type WordStrengthList = Record<string, WordStrength>;
 
 export const LinkDirections = ['N', 'E', 'S', 'W'] as const;
 
@@ -36,6 +57,12 @@ export type MapNode = {
   innerNodeIds: string[];
   linkIds: LinkIdsType;
 };
+
+export const [languageL, languageC, languageR]: Language[] = [
+  'french',
+  'english',
+  'swedish',
+];
 
 const NOUNS_DEMO: Word[] = [
   {

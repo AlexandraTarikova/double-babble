@@ -1,4 +1,4 @@
-import { type Language, Languages } from '../../data';
+import { languageC, languageL, languageR, Languages } from '../../data';
 import { AutotranslateButton, LanguageHeaderRoot } from './styles';
 import type { FC } from 'react';
 import { RetroSpinner } from '../RetroSpinner';
@@ -8,12 +8,6 @@ export const LanguageHeader: FC<{
   disabled?: boolean;
   loading?: boolean;
 }> = ({ onButtonClick, disabled = false, loading = false }) => {
-  const [languageL, languageC, languageR]: Language[] = [
-    'french',
-    'english',
-    'swedish',
-  ];
-
   const autoTranslate = async () => {
     if (onButtonClick) onButtonClick();
   };

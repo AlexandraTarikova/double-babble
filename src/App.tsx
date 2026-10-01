@@ -91,7 +91,11 @@ function App() {
 
   return (
     <ThemeProvider theme={theme}>
-      <DebugPanel dispatchNodes={dispatchNodes} closeMenu={closeMenu} />
+      <DebugPanel
+        nodes={nodes}
+        dispatchNodes={dispatchNodes}
+        closeMenu={closeMenu}
+      />
       <RootZone>
         <Map
           nodes={nodes}

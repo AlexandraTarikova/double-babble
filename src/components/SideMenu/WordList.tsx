@@ -1,11 +1,12 @@
 import { Box } from '@mui/material';
 import type { FC } from 'react';
-import { WordGroups } from '../../data';
-import type { Language, MapNode } from '../../data';
+import { languageC, languageL, languageR, WordGroups } from '../../data';
+import type { MapNode } from '../../data';
 import {
-  COLOUR_LANGUAGE_LEFT,
-  COLOUR_LANGUAGE_RIGHT,
+  ActionsPanel,
+  languageColors,
   NoWordsHint,
+  TextButton,
   WordExample,
   WordGroup,
   WordGroupHeader,
@@ -17,16 +18,24 @@ import { LanguageHeader } from './LanguageHeader';
 
 export const WordList: FC<{
   nodeInFocus: MapNode;
-}> = ({ nodeInFocus }) => {
+  onZoomClick: () => void;
+}> = ({ nodeInFocus, onZoomClick }) => {
   const totalAmount = Object.values(nodeInFocus.words).flat().length;
-  const [languageL, languageC, languageR]: Language[] = [
-    'french',
-    'english',
-    'swedish',
-  ];
 
   return (
     <>
+      {totalAmount !== 0 && (
+        <ActionsPanel>
+          <TextButton
+            disabled={
+              nodeInFocus.innerNodeIds.length === 0 && !nodeInFocus.parentId
+            }
+            onClick={onZoomClick}
+          >
+            {nodeInFocus.parentId ? '<- ZOOM ->' : '+> ZOOM <+'}
+          </TextButton>
+        </ActionsPanel>
+      )}
       {totalAmount !== 0 && <LanguageHeader />}
       {totalAmount === 0 ? (
         <NoWordsHint>
@@ -46,30 +55,16 @@ export const WordList: FC<{
                   <WordLine
                     key={`${word.translations[languageC]}_${word.translations[languageL]}_${word.translations[languageR]}`}
                   >
-                    <Box>
-                      <WordTranslation color={COLOUR_LANGUAGE_LEFT}>
-                        {word.translations[languageL]}
-                      </WordTranslation>
-                      {word.examples?.[languageL] && (
-                        <WordExample>{word.examples[languageL]}</WordExample>
-                      )}
-                    </Box>
-                    <Box>
-                      <WordTranslation>
-                        {word.translations[languageC]}
-                      </WordTranslation>
-                      {word.examples?.[languageC] && (
-                        <WordExample>{word.examples[languageC]}</WordExample>
-                      )}
-                    </Box>
-                    <Box>
-                      <WordTranslation color={COLOUR_LANGUAGE_RIGHT}>
-                        {word.translations[languageR]}
-                      </WordTranslation>
-                      {word.examples?.[languageR] && (
-                        <WordExample>{word.examples[languageR]}</WordExample>
-                      )}
-                    </Box>
+                    {[languageL, languageC, languageR].map((language) => (
+                      <Box>
+                        <WordTranslation color={languageColors[language]}>
+                          {word.translations[language]}
+                        </WordTranslation>
+                        {word.examples?.[language] && (
+                          <WordExample>{word.examples[language]}</WordExample>
+                        )}
+                      </Box>
+                    ))}
                   </WordLine>
                 ))}
               </WordGroup>

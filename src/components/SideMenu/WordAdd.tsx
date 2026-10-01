@@ -1,13 +1,15 @@
 import { Box } from '@mui/material';
 import { useState } from 'react';
 import type { FC } from 'react';
-import { WordGroups } from '../../data';
+import { languageC, languageL, languageR, WordGroups } from '../../data';
 import type { MapNode, WordGroupsType, Word, Language } from '../../data';
 import {
+  ActionsPanel,
   ButtonsLine,
   COLOUR_LANGUAGE_LEFT,
   COLOUR_LANGUAGE_RIGHT,
   SubmitWordsButton,
+  TextButton,
   TextFieldWord,
   WordGroup,
   WordGroupHeader,
@@ -72,11 +74,6 @@ export const WordAdd: FC<{
     words: Record<WordGroupsType, Word[]>,
   ) => void;
 }> = ({ nodeInFocus, goBack, onAddWords }) => {
-  const [languageL, languageC, languageR]: Language[] = [
-    'french',
-    'english',
-    'swedish',
-  ];
   const deficit = Object.fromEntries(
     typedKeys(WordGroups).map((group) => [
       group,
@@ -204,6 +201,11 @@ export const WordAdd: FC<{
 
   return (
     <>
+      <ActionsPanel>
+        <TextButton disabled={true}>
+          {nodeInFocus.parentId ? '<- ZOOM ->' : '+> ZOOM <+'}
+        </TextButton>
+      </ActionsPanel>
       <LanguageHeader
         onButtonClick={autoTranslate}
         disabled={!enableAutoTranslation}
