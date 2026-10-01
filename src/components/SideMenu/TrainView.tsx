@@ -138,10 +138,10 @@ export const TrainMode: FC<{
                           }) && (
                             <>
                               {[
-                                { label: '[✔]', delta: 1 },
-                                { label: '[~]', delta: 0 },
-                                { label: '[x]', delta: -1 },
-                              ].map(({ label, delta }) => (
+                                { label: '[✔]', value: 1 },
+                                { label: '[~]', value: 0 },
+                                { label: '[x]', value: -1 },
+                              ].map(({ label, value }) => (
                                 <TextButton
                                   active
                                   onClick={() =>
@@ -149,7 +149,7 @@ export const TrainMode: FC<{
                                       group,
                                       word.translations[language],
                                       language,
-                                      delta,
+                                      value,
                                     )
                                   }
                                 >

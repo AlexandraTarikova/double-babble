@@ -95,14 +95,14 @@ function generateTestData(words: Record<WordGroupsType, Word[]>) {
     words.flatMap((word) => [
       getWordKey({
         word: word.translations[languageL],
-        from: languageL,
-        to: languageC,
+        from: languageC,
+        to: languageL,
         group,
       }),
       getWordKey({
         word: word.translations[languageR],
-        from: languageR,
-        to: languageC,
+        from: languageC,
+        to: languageR,
         group,
       }),
     ]),

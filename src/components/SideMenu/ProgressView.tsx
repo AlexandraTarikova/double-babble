@@ -68,8 +68,8 @@ export const ProgressView: FC<{
                   >
                     {[languageL, languageC, languageR].map((language) => {
                       const key = getWordKey({
-                        from: language,
-                        to: languageC,
+                        from: languageC,
+                        to: language,
                         word: word.translations[language],
                         group,
                       });
@@ -98,12 +98,6 @@ export const ProgressView: FC<{
                               ))}
                             </TrainingIndicatorLine>
                           )}
-                          {/* {language === languageC &&
-                            word.examples?.[language] && (
-                              <WordExample>
-                                {word.examples[language]}
-                              </WordExample>
-                            )} */}
                         </Box>
                       );
                     })}
