@@ -70,7 +70,8 @@ export const ProgressView: FC<{
                       const key = getWordKey({
                         from: languageC,
                         to: language,
-                        word: word.translations[language],
+                        wordFrom: word.translations[languageC],
+                        wordTo: word.translations[language],
                         group,
                       });
                       const strength = data[key];

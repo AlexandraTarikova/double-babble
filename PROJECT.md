@@ -28,15 +28,21 @@ that belongs to it. Learning vocabulary is what makes the map grow.
 
 - A **node** is a place. It holds words grouped into nouns / verbs / adjectives.
 - A node's **level** comes from how many words it holds, measured against
-  `REQUIRED_WORDS_PER_LEVEL` (currently 5 nouns / 2 verbs / 2 adjectives per level). The
+  `REQUIRED_WORDS_PER_LEVEL` (currently 2 nouns / 1 verb / 1 adjective per level). The
   lowest group wins, so you can't level up on nouns alone.
 - Levelling up unlocks **branching**: a node can grow a neighbour in one of four directions
-  (N/E/S/W) once it has enough levels per existing link.
+  (N/E/S/W). Each new branch costs `LEVELS_REQUIRED_PER_LINK` (3) more levels; the link back
+  to the parent doesn't count, and a lone root node gets its first branch for free.
 - Each word carries **three translations** — the two languages you're learning, plus English
-  as the pivot in the middle. Currently French / English / Swedish, hardcoded in two places
-  (see `TECH_DEBT.md`, T4 "configurable languages").
+  as the pivot in the middle. Currently French / English / Swedish, declared once in
+  `data.ts` as `languageL` / `languageC` / `languageR` (see `TECH_DEBT.md`, T4 "configurable
+  languages" for what's still hardcoded).
 - **AUTO** fills the two outer columns from the English one via an API. API is a simplest
   free API found, produces bad results, but works as a placeholder for now.
+- **TRAIN** hides the outer translations; you reveal one, then grade yourself
+  `[✔]` / `[~]` / `[x]` (1 / 0 / -1). Each grade is appended to that word pair's history.
+- **PROGRESS** shows the last five grades per word pair as a row of dots. Only the "general"
+  tab exists; "errors" and "time" are disabled placeholders.
 - `innerNodeIds` is a placeholder for the eventual "zoom into a node's own map" feature.
   Unused so far.
 
@@ -62,22 +68,35 @@ codebase, and worth knowing before suggesting anything:
 2. **Level is derived from word counts.** `getNodeLevel(node)` (`helpers.ts`). There is no
    `level` field — it was deliberately deleted, so there's nothing to keep in sync, and the
    levelling rule is retuned by editing one constant.
-3. **State is derived from an action log.** `localStorage` holds
+3. **State is derived from an action log.** `localStorage` key `nodesHistory` holds
    `{schema, base, log}` — a base snapshot plus an append-only list of actions — and load is
    `log.reduce(nodesReducer, base)`. Actions must be **deltas, not snapshots**, or replay
    writes stale data back.
 
+**The one deliberate exception: training results.** They live in a second key,
+`wordStrength`, as a plain snapshot — `Record<key, {results, lastCheck}>` rewritten whole on
+every grade, no log, no schema, outside the reducer. Records are keyed by **word text**
+(`getWordKey`, `helpers.ts`), not by any id — words don't have ids. So the same word pair in
+two nodes shares one record, and changing a word's text orphans its history.
+
 ## Where the code lives
 
-- `src/data.ts` — types + demo vocabulary (most of its length is the data)
-- `src/helpers.ts` — `createNode`, `getNodeLevel`, the levelling constant
+- `src/data.ts` — types, the language triple, and an old copy of the demo map (now unused)
+- `src/nodesDemo.ts` — the demo map `DebugPanel` loads (new, not committed yet)
+- `src/helpers.ts` — `createNode`, `getNodeLevel`, the levelling constant, `getWordKey`
 - `src/nodesReducer.ts` — every state transition: `addNode` / `edit` / `delete` / `set` /
   `addWords`
-- `src/storage.ts` — the event-sourced `localStorage` layer
+- `src/storageHistory.ts` — the event-sourced `nodesHistory` layer (was `storage.ts`)
+- `src/storageStrength.ts` — the `wordStrength` training store
 - `src/App.tsx` — wiring; `dispatch` wraps `dispatchNodes` so every action is logged
-- `src/components/Map/` — layout, rendering, branch buttons
-- `src/components/SideMenu/` — the node panel: `WordList` (read) and `WordAdd` (write)
-- `src/components/DebugPanel/` — dev-only escape hatches; currently ships to production
+- `src/components/Map/` — layout, rendering, branch buttons, the branch gate
+- `src/components/SideMenu/` — the node panel. `SideMenu` owns the mode
+  (`initial` / `words` / `levelUp` / `train` / `progress`) and switches between `NewTitle`
+  (naming a new node), `TitleBlock` (title + level + `[+]`), `WordList` (read), `WordAdd`
+  (write), `TrainView` (exports `TrainMode`) and `ProgressView`. `LanguageHeader` is the
+  shared three-column header.
+- `src/components/DebugPanel.tsx` — dev-only escape hatches (reset map, load demo,
+  generate / reset training data); currently ships to production
 
 ## Invariants
 
@@ -90,12 +109,16 @@ Read that section before changing delete, branching, or the reducer.**
 ## Where it is right now
 
 The core loop works end to end: add words → gain a level → the node grows → branch to a new
-place, and it all survives a reload. `tsc -b` and `prettier` are clean. `npm run lint` reports
-three errors, all from one deliberately commented-out block in `Map.tsx` — see `TECH_DEBT.md`,
-T2.3.
+place, and it all survives a reload. TRAIN v1 and PROGRESS "general" work on top of it.
+`tsc -b`, `prettier` and `npm run lint` are all clean **in the working tree** — the branch
+gate is switched back on there, which is what cleared the last three lint errors, but that
+isn't committed yet (as of 2026-10-06).
 
-Built but unfinished: TRAIN, EDIT, delete-a-titled-node, examples in the add form, search,
-zoom, inner maps.
+Built but unfinished: EDIT, delete-a-titled-node, examples in the add form, PROGRESS
+"errors"/"time", search, zoom, inner maps.
+
+Next up, deliberately: **pause features and make the UI responsive.** It currently assumes a
+wide screen. Starting notes are at the bottom of `TECH_DEBT.md`.
 
 ```
 npm run dev      # vite

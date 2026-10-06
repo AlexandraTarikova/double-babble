@@ -26,9 +26,9 @@ export function createNode(): MapNode {
 }
 
 export const REQUIRED_WORDS_PER_LEVEL: Record<WordGroupsType, number> = {
-  nouns: 5,
-  verbs: 2,
-  adjectives: 2,
+  nouns: 2,
+  verbs: 1,
+  adjectives: 1,
 };
 
 export function getNodeLevel(node: MapNode) {
@@ -54,15 +54,17 @@ export function typedEntries<T extends Record<string, unknown>>(obj: T) {
 }
 
 export function getWordKey({
-  word,
+  wordFrom,
+  wordTo,
   group,
   from,
   to,
 }: {
-  word: string;
+  wordFrom: string;
+  wordTo: string;
   group: WordGroupsType;
   from: Language;
   to: Language;
 }) {
-  return `${group}__from-${from}-to-${to}__${word}`;
+  return `${group}__${wordFrom}__from-${from}-to-${to}__${wordTo}`;
 }

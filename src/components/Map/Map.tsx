@@ -159,7 +159,7 @@ export const Map: FC<{
 
     if (
       linksAmount >=
-      Math.floor(getNodeLevel(targetNode) / LEVELS_REQUIRED_PER_LINK)
+      Math.floor(getNodeLevel(targetNode) / LEVELS_REQUIRED_PER_LINK) + 1
     ) {
       handleDisabledClick(targetNode.id);
       return;
@@ -261,6 +261,9 @@ export const Map: FC<{
             (position) => position.x === x - 1 && position.y === y,
           );
           const level = getNodeLevel(node);
+          const linksAmount = Object.values(node.linkIds).filter(
+            (id) => id !== null,
+          ).length;
           return (
             <>
               {node.linkIds.S && (
@@ -312,7 +315,7 @@ export const Map: FC<{
                 </NodeTitle>
                 <NodeLevel
                   animated={nodeLevelPulsingId === node.id}
-                  closestBreakpoint={`${(Math.floor(level / 3) * 3 + 3).toString()}`}
+                  closestBreakpoint={`${(linksAmount * LEVELS_REQUIRED_PER_LINK).toString()}`}
                   onAnimationEnd={() => {
                     if (nodeLevelPulsingId === node.id) {
                       setNodeLevelPulsingId(null);

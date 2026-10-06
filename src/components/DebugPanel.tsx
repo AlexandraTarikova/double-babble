@@ -5,7 +5,6 @@ import {
   languageC,
   languageL,
   languageR,
-  NODES_DEMO,
   WordGroups,
   type MapNode,
   type Word,
@@ -20,6 +19,7 @@ import {
   typedKeys,
 } from '../helpers';
 import { setWordStrengthList } from '../storageStrength';
+import { NODES_DEMO } from '../nodesDemo';
 
 export const DebugButton = styled(TextButton)({
   padding: '4px 12px',
@@ -94,13 +94,15 @@ function generateTestData(words: Record<WordGroupsType, Word[]>) {
   const allKeys = typedEntries(words).flatMap(([group, words]) =>
     words.flatMap((word) => [
       getWordKey({
-        word: word.translations[languageL],
+        wordFrom: word.translations[languageC],
+        wordTo: word.translations[languageL],
         from: languageC,
         to: languageL,
         group,
       }),
       getWordKey({
-        word: word.translations[languageR],
+        wordFrom: word.translations[languageC],
+        wordTo: word.translations[languageR],
         from: languageC,
         to: languageR,
         group,

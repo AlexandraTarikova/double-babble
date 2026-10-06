@@ -79,11 +79,17 @@ export const TrainMode: FC<{
 
   const onSelfEvaluationClick = (
     group: WordGroupsType,
-    word: string,
+    word: Word,
     language: Language,
     value: number,
   ) => {
-    const key = getWordKey({ group, word, to: language, from: languageC });
+    const key = getWordKey({
+      group,
+      wordFrom: word.translations[languageC],
+      wordTo: word.translations[language],
+      to: language,
+      from: languageC,
+    });
     const current = wordStrengthList[key];
 
     const updatedList: WordStrengthList = {
@@ -147,7 +153,7 @@ export const TrainMode: FC<{
                                   onClick={() =>
                                     onSelfEvaluationClick(
                                       group,
-                                      word.translations[language],
+                                      word,
                                       language,
                                       value,
                                     )
