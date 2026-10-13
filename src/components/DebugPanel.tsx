@@ -1,4 +1,4 @@
-import { Box, styled } from '@mui/material';
+import { Box, styled, useMediaQuery } from '@mui/material';
 import { type FC, type ActionDispatch, useState } from 'react';
 import { COLOUR_DARK, COLOUR_LIGHT, TextButton } from './SideMenu/styles';
 import {
@@ -35,6 +35,7 @@ export const DebugPanel: FC<{
   closeMenu: () => void;
 }> = ({ nodes, dispatchNodes, closeMenu }) => {
   const [expanded, setExpanded] = useState(false);
+  const isSmallScreen = useMediaQuery((t) => t.breakpoints.down('md'));
 
   const onGenerateTrainingDataClick = () => {
     const allWords = Object.fromEntries(
@@ -46,6 +47,8 @@ export const DebugPanel: FC<{
     const newList = generateTestData(allWords);
     setWordStrengthList(newList);
   };
+
+  if (isSmallScreen) return null;
 
   return (
     <Box position={'fixed'} top={0} left={0} zIndex={100} display={'flex'}>

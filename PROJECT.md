@@ -1,7 +1,9 @@
 # double-babble — project brief
 
 A vocabulary-map language-learning game. Personal pet project: a portfolio piece, and a way
-to learn React and TypeScript properly by writing them.
+to learn React and TypeScript properly by writing them. **As of 2026-10, also the project for
+learning backend / fullstack** — a server is being added to apply what I learn as I go, not
+because the game needs one.
 
 This file exists so a fresh conversation doesn't have to be re-explained from scratch. Short
 on purpose. `TECH_DEBT.md` is the long-form companion — current issues, decisions and the
@@ -53,8 +55,15 @@ written up in `TECH_DEBT.md`.
 ## Stack
 
 React 19 + TypeScript, Vite, MUI v7 with Emotion `styled`. No router, no state library, no
-tests, no backend — state lives in a `useReducer` and persists to `localStorage`. Visual style
-is deliberately retro/terminal.
+tests — state lives in a `useReducer` and persists to `localStorage`. **No backend yet**; one
+is the next thing being built, and its stack isn't decided. Visual style is deliberately
+retro/terminal, dark only (`color-scheme: dark`).
+
+**Responsive:** desktop-first, using MUI's default breakpoints via `theme.breakpoints.down()`.
+Below `md` (900px) the side menu goes full-screen with two language columns instead of three
+and a bottom bar for modes. Works well down to ~500px, acceptable to ~400px; below that would
+need its own mobile design. Rule of thumb used throughout: restyle the same component with a
+media query; reach for `useMediaQuery` in JS only when behaviour differs, not just looks.
 
 ## Three architectural bets, all the same shape
 
@@ -71,7 +80,11 @@ codebase, and worth knowing before suggesting anything:
 3. **State is derived from an action log.** `localStorage` key `nodesHistory` holds
    `{schema, base, log}` — a base snapshot plus an append-only list of actions — and load is
    `log.reduce(nodesReducer, base)`. Actions must be **deltas, not snapshots**, or replay
-   writes stale data back.
+   writes stale data back. Ids are minted by the caller (`createId()`), never the reducer, so
+   replay is deterministic.
+
+The same instinct shows up in smaller places — e.g. on mobile only the chosen outer language
+is stored; which columns are visible is derived from it plus the screen size.
 
 **The one deliberate exception: training results.** They live in a second key,
 `wordStrength`, as a plain snapshot — `Record<key, {results, lastCheck}>` rewritten whole on
@@ -79,24 +92,31 @@ every grade, no log, no schema, outside the reducer. Records are keyed by **word
 (`getWordKey`, `helpers.ts`), not by any id — words don't have ids. So the same word pair in
 two nodes shares one record, and changing a word's text orphans its history.
 
+**These bets shape the backend.** The action log is already a sync format, the reducer is pure
+enough to run on a server, and client-minted ids make retries safe. The training store is the
+part that doesn't fit. `TECH_DEBT.md` → "Before the backend" has the detail.
+
 ## Where the code lives
 
-- `src/data.ts` — types, the language triple, and an old copy of the demo map (now unused)
-- `src/nodesDemo.ts` — the demo map `DebugPanel` loads (new, not committed yet)
-- `src/helpers.ts` — `createNode`, `getNodeLevel`, the levelling constant, `getWordKey`
+- `src/data.ts` — types and the language triple
+- `src/nodesDemo.ts` — the demo map `DebugPanel` loads (almost all of the repo's line count)
+- `src/helpers.ts` — `createId`, `createNode`, `getNodeLevel`, the levelling constant,
+  `getWordKey`. `createId` is a hand-rolled v4 UUID because `crypto.randomUUID()` only exists
+  on HTTPS / `localhost`, which breaks testing on a phone over the LAN.
 - `src/nodesReducer.ts` — every state transition: `addNode` / `edit` / `delete` / `set` /
   `addWords`
-- `src/storageHistory.ts` — the event-sourced `nodesHistory` layer (was `storage.ts`)
+- `src/storageHistory.ts` — the event-sourced `nodesHistory` layer
 - `src/storageStrength.ts` — the `wordStrength` training store
 - `src/App.tsx` — wiring; `dispatch` wraps `dispatchNodes` so every action is logged
 - `src/components/Map/` — layout, rendering, branch buttons, the branch gate
 - `src/components/SideMenu/` — the node panel. `SideMenu` owns the mode
-  (`initial` / `words` / `levelUp` / `train` / `progress`) and switches between `NewTitle`
-  (naming a new node), `TitleBlock` (title + level + `[+]`), `WordList` (read), `WordAdd`
-  (write), `TrainView` (exports `TrainMode`) and `ProgressView`. `LanguageHeader` is the
-  shared three-column header.
-- `src/components/DebugPanel.tsx` — dev-only escape hatches (reset map, load demo,
-  generate / reset training data); currently ships to production
+  (`initial` / `words` / `levelUp` / `train` / `progress`) and the mobile language choice,
+  and switches between `NewTitle` (naming a new node), `TitleBlock` (title + level + `[+]`),
+  `WordList` (read), `WordAdd` (write), `TrainView` (exports `TrainMode`) and
+  `ProgressView`. `LanguageHeader` is the shared column header; `FlexLine` + `WordCell` in
+  `styles.ts` are the shared column layout.
+- `src/components/DebugPanel.tsx` — dev escape hatches (reset map, load demo, generate /
+  reset training data). Hidden below `md`, but still ships to production on desktop.
 
 ## Invariants
 
@@ -104,21 +124,22 @@ There are four rules the code quietly depends on — the graph stays connected, 
 reachable from any anchor, links are symmetric, and the action log stays replayable. They are
 not enforced anywhere, and breaking one causes nodes to silently disappear rather than throw.
 **`TECH_DEBT.md` has them written out with the exact conditions currently holding each one up.
-Read that section before changing delete, branching, or the reducer.**
+Read that section before changing delete, branching, the reducer — or anything a server will
+accept from a client.**
 
 ## Where it is right now
 
 The core loop works end to end: add words → gain a level → the node grows → branch to a new
-place, and it all survives a reload. TRAIN v1 and PROGRESS "general" work on top of it.
-`tsc -b`, `prettier` and `npm run lint` are all clean **in the working tree** — the branch
-gate is switched back on there, which is what cleared the last three lint errors, but that
-isn't committed yet (as of 2026-10-06).
+place, and it all survives a reload. TRAIN v1 and PROGRESS "general" work on top of it, and
+the UI is usable on tablets and phones (mobile v1, 2026-10-13). `tsc -b`, `prettier` and
+`npm run lint` are clean.
 
 Built but unfinished: EDIT, delete-a-titled-node, examples in the add form, PROGRESS
 "errors"/"time", search, zoom, inner maps.
 
-Next up, deliberately: **pause features and make the UI responsive.** It currently assumes a
-wide screen. Starting notes are at the bottom of `TECH_DEBT.md`.
+Next up: **a backend.** Two decisions come first — does the server store actions or nodes,
+and what does it refuse — written up at the bottom of `TECH_DEBT.md`. Features may still
+happen in downtime.
 
 ```
 npm run dev      # vite

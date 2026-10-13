@@ -1,6 +1,13 @@
 import { LinkDirections } from '../../data';
 import type { LinkDirectionType, MapNode } from '../../data';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  Fragment,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import type { FC, SyntheticEvent } from 'react';
 import {
   MapContainer,
@@ -265,7 +272,7 @@ export const Map: FC<{
             (id) => id !== null,
           ).length;
           return (
-            <>
+            <Fragment key={node.id}>
               {node.linkIds.S && (
                 <NodeLink
                   type="V"
@@ -357,7 +364,7 @@ export const Map: FC<{
                   </NodeAddButton>
                 )}
               </NodeRoot>
-            </>
+            </Fragment>
           );
         })}
       </MapContainer>

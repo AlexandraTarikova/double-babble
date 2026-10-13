@@ -15,7 +15,7 @@ import { COLOUR_DARK } from './components/SideMenu/styles';
 
 const RootZone = styled(Box)({
   minWidth: '100vw',
-  minHeight: '100vh',
+  minHeight: '100dvh',
   position: 'relative',
   background: COLOUR_DARK,
   display: 'flex',
@@ -110,6 +110,7 @@ function App() {
             nodeInFocus={nodeInFocus}
             onNodeRename={(newName) => onNodeRename(nodeInFocus, newName)}
             onCancelClick={onCancelNewNodeClick}
+            onCloseClick={closeMenu}
             onAddWords={onAddWords}
           />
         )}

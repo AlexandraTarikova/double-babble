@@ -1,12 +1,12 @@
-import { Box } from '@mui/material';
-import type { FC } from 'react';
+import { type FC } from 'react';
 import { languageC, languageL, languageR, WordGroups } from '../../data';
-import type { MapNode } from '../../data';
+import type { Language, MapNode } from '../../data';
 import {
   ActionsPanel,
   languageColors,
   NoWordsHint,
   TextButton,
+  WordCell,
   WordExample,
   WordGroup,
   WordGroupHeader,
@@ -18,8 +18,10 @@ import { LanguageHeader } from './LanguageHeader';
 
 export const WordList: FC<{
   nodeInFocus: MapNode;
+  languagesVisible: Language[];
+  onLanguageClick?: () => void;
   onZoomClick: () => void;
-}> = ({ nodeInFocus, onZoomClick }) => {
+}> = ({ nodeInFocus, languagesVisible, onLanguageClick, onZoomClick }) => {
   const totalAmount = Object.values(nodeInFocus.words).flat().length;
 
   return (
@@ -36,34 +38,42 @@ export const WordList: FC<{
           </TextButton>
         </ActionsPanel>
       )}
-      {totalAmount !== 0 && <LanguageHeader />}
+      {totalAmount !== 0 && (
+        <LanguageHeader
+          onLanguageClick={onLanguageClick}
+          languageVisible={languagesVisible}
+        />
+      )}
       {totalAmount === 0 ? (
         <NoWordsHint>
           Click the [+] button to level up and add words
         </NoWordsHint>
       ) : (
         typedEntries(WordGroups).map(
-          ([key, label]) =>
-            nodeInFocus.words[key].length !== 0 && (
-              <WordGroup>
-                <WordGroupHeader key={key}>
+          ([group, label]) =>
+            nodeInFocus.words[group].length !== 0 && (
+              <WordGroup key={`${group}_group`}>
+                <WordGroupHeader key={group}>
                   <span>
-                    {label} [{nodeInFocus?.words[key].length}]
+                    {label} [{nodeInFocus?.words[group].length}]
                   </span>
                 </WordGroupHeader>
-                {nodeInFocus.words[key].map((word) => (
+                {nodeInFocus.words[group].map((word) => (
                   <WordLine
                     key={`${word.translations[languageC]}_${word.translations[languageL]}_${word.translations[languageR]}`}
                   >
                     {[languageL, languageC, languageR].map((language) => (
-                      <Box>
+                      <WordCell
+                        hidden={!languagesVisible.includes(language)}
+                        key={`${language}_word`}
+                      >
                         <WordTranslation color={languageColors[language]}>
                           {word.translations[language]}
                         </WordTranslation>
                         {word.examples?.[language] && (
                           <WordExample>{word.examples[language]}</WordExample>
                         )}
-                      </Box>
+                      </WordCell>
                     ))}
                   </WordLine>
                 ))}

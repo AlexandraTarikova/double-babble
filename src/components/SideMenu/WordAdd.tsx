@@ -1,4 +1,3 @@
-import { Box } from '@mui/material';
 import { useState } from 'react';
 import type { FC } from 'react';
 import { languageC, languageL, languageR, WordGroups } from '../../data';
@@ -6,11 +5,11 @@ import type { MapNode, WordGroupsType, Word, Language } from '../../data';
 import {
   ActionsPanel,
   ButtonsLine,
-  COLOUR_LANGUAGE_LEFT,
-  COLOUR_LANGUAGE_RIGHT,
+  languageColors,
   SubmitWordsButton,
   TextButton,
   TextFieldWord,
+  WordCell,
   WordGroup,
   WordGroupHeader,
   WordLine,
@@ -68,12 +67,20 @@ const getPromiseValue = <T,>(r: PromiseSettledResult<T>) => {
 
 export const WordAdd: FC<{
   nodeInFocus: MapNode;
+  languagesVisible: Language[];
+  onLanguageClick?: () => void;
   goBack: () => void;
   onAddWords: (
     targetNodeId: string,
     words: Record<WordGroupsType, Word[]>,
   ) => void;
-}> = ({ nodeInFocus, goBack, onAddWords }) => {
+}> = ({
+  nodeInFocus,
+  languagesVisible,
+  onLanguageClick,
+  goBack,
+  onAddWords,
+}) => {
   const deficit = Object.fromEntries(
     typedKeys(WordGroups).map((group) => [
       group,
@@ -210,67 +217,45 @@ export const WordAdd: FC<{
         onButtonClick={autoTranslate}
         disabled={!enableAutoTranslation}
         loading={isLoading}
+        onLanguageClick={onLanguageClick}
+        languageVisible={languagesVisible}
       />
-      {typedEntries(WordGroups).map(([key, label]) => {
-        const wordsInGroup = words[key];
+      {typedEntries(WordGroups).map(([group, label]) => {
+        const wordsInGroup = words[group];
         return (
-          <WordGroup key={key}>
+          <WordGroup key={`${group}_group`}>
             <WordGroupHeader>
               <span>
-                {label} [{deficit[key]}]
+                {label} [{deficit[group]}]
               </span>
             </WordGroupHeader>
             {wordsInGroup.map((_, index) => (
-              <WordLine key={`${key}_${index}`}>
-                <Box>
-                  <WordTranslation color={COLOUR_LANGUAGE_LEFT}>
-                    <TextFieldWord
-                      disabled={isLoading}
-                      id={`${key}_${index}_${languageL}_input`}
-                      value={
-                        isLoading &&
-                        !!wordsInGroup[index].translations[languageC]
-                          ? '...'
-                          : wordsInGroup[index].translations[languageL]
-                      }
-                      variant="standard"
-                      size="medium"
-                      onChange={handleChangeWord(key, index, languageL)}
-                      fullWidth
-                    />
-                  </WordTranslation>
-                </Box>
-                <Box>
-                  <WordTranslation>
-                    <TextFieldWord
-                      disabled={isLoading}
-                      id={`${key}_${index}_${languageC}_input`}
-                      value={wordsInGroup[index].translations[languageC]}
-                      variant="standard"
-                      size="medium"
-                      onChange={handleChangeWord(key, index, languageC)}
-                      fullWidth
-                    />
-                  </WordTranslation>
-                </Box>
-                <Box>
-                  <WordTranslation color={COLOUR_LANGUAGE_RIGHT}>
-                    <TextFieldWord
-                      disabled={isLoading}
-                      id={`${key}_${index}_${languageR}_input`}
-                      value={
-                        isLoading &&
-                        !!wordsInGroup[index].translations[languageC]
-                          ? '...'
-                          : wordsInGroup[index].translations[languageR]
-                      }
-                      variant="standard"
-                      size="medium"
-                      onChange={handleChangeWord(key, index, languageR)}
-                      fullWidth
-                    />
-                  </WordTranslation>
-                </Box>
+              <WordLine key={`${group}_${index}`}>
+                {[languageL, languageC, languageR].map((language) => (
+                  <WordCell
+                    hidden={!languagesVisible.includes(language)}
+                    key={`${language}_word`}
+                  >
+                    <WordTranslation color={languageColors[language]}>
+                      <TextFieldWord
+                        disabled={isLoading}
+                        id={`${group}_${index}_${language}_input`}
+                        value={
+                          language === languageC
+                            ? wordsInGroup[index].translations[languageC]
+                            : isLoading &&
+                                !!wordsInGroup[index].translations[languageC]
+                              ? '...'
+                              : wordsInGroup[index].translations[language]
+                        }
+                        variant="standard"
+                        size="medium"
+                        onChange={handleChangeWord(group, index, language)}
+                        fullWidth
+                      />
+                    </WordTranslation>
+                  </WordCell>
+                ))}
               </WordLine>
             ))}
           </WordGroup>

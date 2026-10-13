@@ -8,13 +8,10 @@ export const COLOUR_HIGHLIGHT = '#F3DE2C';
 export const COLOUR_MUTED = '#765B63';
 export const COLOUR_FOCUS = '#FFF';
 
-export const COLOUR_LANGUAGE_LEFT = '#FF7070';
-export const COLOUR_LANGUAGE_CENTER = '#FFF';
-export const COLOUR_LANGUAGE_RIGHT = '#629FD0';
-
 export const languageColors: Partial<Record<Language, string>> = {
-  french: COLOUR_LANGUAGE_LEFT,
-  swedish: COLOUR_LANGUAGE_RIGHT,
+  french: '#FF7070',
+  swedish: '#629FD0',
+  english: '#FFFFFF',
 };
 
 export const TextButton = styled('button', {
@@ -30,47 +27,44 @@ export const TextButton = styled('button', {
   },
 }));
 
-export const LanguageHeaderRoot = styled(Box)({
+export const FlexLine = styled(Box)(({ theme }) => ({
+  display: 'flex',
+  gap: '24px',
+  [theme.breakpoints.down('md')]: {
+    gap: '8px',
+  },
+}));
+
+export const LanguageHeaderRoot = styled(FlexLine)(({ theme }) => ({
   width: '100%',
   fontSize: '24px',
   marginTop: '32px',
   marginBottom: '-32px',
-  display: 'flex',
-  '& > span': {
-    display: 'inline-block',
-    // textAlign: "center",
+
+  [theme.breakpoints.down('md')]: {
+    position: 'sticky',
+    top: '-8px',
+    background: COLOUR_DARK,
+    marginTop: 0,
+    padding: '16px 0',
+    zIndex: 1,
   },
-  '& > span:nth-child(1)': {
-    width: '30%',
-    color: COLOUR_LANGUAGE_LEFT,
-  },
-  '& > span:nth-child(2)': {
-    width: '40%',
-    padding: '0 24px',
-    color: COLOUR_LANGUAGE_CENTER,
-  },
-  '& > span:nth-child(3)': {
-    width: '30%',
-    color: COLOUR_LANGUAGE_RIGHT,
-  },
-});
+}));
 
 export const WordGroup = styled(Box)({
   marginTop: '40px',
 });
 
-export const WordGroupHeader = styled(Box)({
+export const WordGroupHeader = styled(Box)(({ theme }) => ({
   width: '100%',
   fontSize: '14px',
   textAlign: 'center',
   color: COLOUR_HIGHLIGHT,
   position: 'relative',
-  // marginTop: "24px",
   '&::before': {
     content: "''",
     width: '100%',
     height: '1px',
-    // borderTop: `1px dashed ${COLOUR_HIGHLIGHT}`,
     background: COLOUR_HIGHLIGHT,
     position: 'absolute',
     left: 0,
@@ -80,20 +74,28 @@ export const WordGroupHeader = styled(Box)({
     background: COLOUR_DARK,
     position: 'relative',
   },
+  [theme.breakpoints.down('md')]: {
+    position: 'sticky',
+    top: '60px',
+  },
+}));
+
+export const WordLine = styled(FlexLine)({
+  paddingTop: '12px',
 });
 
-export const WordLine = styled(Box)({
-  display: 'flex',
-  paddingTop: '12px',
-  '& > div:nth-child(1), & > div:nth-child(3)': {
-    width: '30%',
-  },
-  '& > div:nth-child(2)': {
-    width: '40%',
-    padding: '0 24px',
-  },
-});
+export const WordCell = styled(Box, {
+  shouldForwardProp: (propName) => propName !== 'hidden',
+})<{ hidden?: boolean }>(({ hidden = false }) => ({
+  flex: 1,
+  display: hidden ? 'none' : undefined,
+  minWidth: 0,
+  overflowWrap: 'anywhere',
+}));
+
 export const WordTranslation = styled(Box)({
+  maxWidth: '95%',
+  position: 'relative',
   fontSize: '20px',
 });
 export const WordExample = styled(Box)({
@@ -120,14 +122,13 @@ export const pulse = keyframes`
   }
 `;
 
-export const MenuZone = styled(Box)({
+export const MenuZone = styled(Box)(({ theme }) => ({
   minWidth: '60%',
   position: 'relative',
   background: COLOUR_DARK,
-  // padding: '40px',
   padding: '8px 40px 40px 40px',
   borderLeft: `1px solid ${COLOUR_DARK_MUTED}`,
-  maxHeight: '100vh',
+  maxHeight: '100dvh',
   overflowY: 'auto',
   overflowX: 'visible',
 
@@ -165,10 +166,18 @@ export const MenuZone = styled(Box)({
   '&::-webkit-scrollbar-corner': {
     background: 'transparent',
   },
-});
+
+  [theme.breakpoints.down('md')]: {
+    position: 'absolute',
+    inset: 0,
+    zIndex: 1,
+    padding: '8px 12px 80px 12px',
+  },
+}));
+
 export const ModePanel = styled(Box, {
   shouldForwardProp: (propName) => propName !== 'hidden',
-})<{ hidden?: boolean }>(({ hidden = false }) => ({
+})<{ hidden?: boolean }>(({ theme, hidden = false }) => ({
   display: 'flex',
   justifyContent: 'center',
   alignItems: 'center',
@@ -177,6 +186,22 @@ export const ModePanel = styled(Box, {
   fontSize: '16px',
   marginBottom: '12px',
   visibility: hidden ? 'hidden' : 'visible',
+
+  [theme.breakpoints.down('md')]: {
+    position: 'fixed',
+    bottom: 0,
+    padding: '16px 0',
+    width: '100%',
+    left: 0,
+    background: COLOUR_DARK_MUTED,
+    marginBottom: 0,
+    zIndex: 1,
+    gap: 'unset',
+    justifyContent: 'space-around',
+    '&> button:disabled': {
+      color: COLOUR_DARK,
+    },
+  },
 }));
 export const ModeButton = styled(TextButton)({
   display: 'flex',
@@ -269,7 +294,6 @@ export const TextFieldWord = styled(TextField)({
       color: 'inherit',
     },
   },
-  marginRight: '40px',
 });
 
 export const ButtonsLine = styled(Box)({
@@ -342,4 +366,27 @@ export const TrainingIndicator = styled('span', {
   verticalAlign: 'middle',
   fontWeight: value === null ? 'bold' : 'normal',
   fontSize: '16px',
+}));
+
+export const BackToMapButton = styled(TextButton)(({ theme }) => ({
+  display: 'none',
+  position: 'absolute',
+  top: '12px',
+  left: '8px',
+  fontSize: '28px',
+  fontFamily: '"Press Start 2P", system-ui',
+  [theme.breakpoints.down('md')]: {
+    display: 'block',
+  },
+}));
+
+export const SelfEvaluationRoot = styled(Box)(({ theme }) => ({
+  display: 'inline-block',
+  [theme.breakpoints.down('md')]: {
+    position: 'absolute',
+    top: '-28px',
+    left: '-4px',
+    background: COLOUR_DARK,
+    opacity: 0.9,
+  },
 }));

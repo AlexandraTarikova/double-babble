@@ -1,4 +1,4 @@
-import { Box, styled } from '@mui/material';
+import { styled } from '@mui/material';
 import { useState, type FC } from 'react';
 import { languageC, languageL, languageR, WordGroups } from '../../data';
 import type {
@@ -12,7 +12,9 @@ import {
   ActionsPanel,
   COLOUR_FOCUS,
   languageColors,
+  SelfEvaluationRoot,
   TextButton,
+  WordCell,
   WordExample,
   WordGroup,
   WordGroupHeader,
@@ -47,8 +49,10 @@ const isSameEntry = (a: EntryId, b: EntryId) =>
 
 export const TrainMode: FC<{
   nodeInFocus: MapNode;
+  languagesVisible: Language[];
+  onLanguageClick?: () => void;
   onResetClick: () => void;
-}> = ({ nodeInFocus, onResetClick }) => {
+}> = ({ nodeInFocus, languagesVisible, onLanguageClick, onResetClick }) => {
   const [words, setWords] = useState(
     Object.fromEntries(
       typedEntries(nodeInFocus.words).map(([key, value]) => [
@@ -108,11 +112,14 @@ export const TrainMode: FC<{
       <ActionsPanel>
         <TextButton onClick={onResetClick}>~ RESET ~</TextButton>
       </ActionsPanel>
-      <LanguageHeader />
+      <LanguageHeader
+        onLanguageClick={onLanguageClick}
+        languageVisible={languagesVisible}
+      />
       {typedEntries(WordGroups).map(
         ([group, label]) =>
           words[group].length !== 0 && (
-            <WordGroup>
+            <WordGroup key={`${group}_group`}>
               <WordGroupHeader key={group}>
                 <span>
                   {label} [{words[group].length}]
@@ -123,7 +130,10 @@ export const TrainMode: FC<{
                   key={`${word.translations[languageC]}_${word.translations[languageL]}_${word.translations[languageR]}`}
                 >
                   {[languageL, languageC, languageR].map((language) => (
-                    <Box>
+                    <WordCell
+                      hidden={!languagesVisible.includes(language)}
+                      key={`${language}_word`}
+                    >
                       <WordTranslation color={languageColors[language]}>
                         {word.revealed.includes(language) ? (
                           word.translations[language]
@@ -142,7 +152,7 @@ export const TrainMode: FC<{
                             index,
                             language: language,
                           }) && (
-                            <>
+                            <SelfEvaluationRoot>
                               {[
                                 { label: '[✔]', value: 1 },
                                 { label: '[~]', value: 0 },
@@ -162,7 +172,7 @@ export const TrainMode: FC<{
                                   {label}
                                 </TextButton>
                               ))}
-                            </>
+                            </SelfEvaluationRoot>
                           )}
                       </WordTranslation>
                       {word.examples?.[language] && (
@@ -172,7 +182,7 @@ export const TrainMode: FC<{
                             : placeholderExample}
                         </WordExample>
                       )}
-                    </Box>
+                    </WordCell>
                   ))}
                 </WordLine>
               ))}

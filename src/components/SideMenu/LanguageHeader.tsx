@@ -1,21 +1,47 @@
-import { languageC, languageL, languageR, Languages } from '../../data';
-import { AutotranslateButton, LanguageHeaderRoot } from './styles';
+import {
+  languageC,
+  languageL,
+  languageR,
+  Languages,
+  type Language,
+} from '../../data';
+import {
+  AutotranslateButton,
+  languageColors,
+  LanguageHeaderRoot,
+  WordCell,
+} from './styles';
 import type { FC } from 'react';
 import { RetroSpinner } from '../RetroSpinner';
 
 export const LanguageHeader: FC<{
   onButtonClick?: () => void;
+  onLanguageClick?: () => void;
+  languageVisible?: Language[];
   disabled?: boolean;
   loading?: boolean;
-}> = ({ onButtonClick, disabled = false, loading = false }) => {
+}> = ({
+  onButtonClick,
+  onLanguageClick,
+  languageVisible,
+  disabled = false,
+  loading = false,
+}) => {
   const autoTranslate = async () => {
     if (onButtonClick) onButtonClick();
   };
 
   return (
     <LanguageHeaderRoot>
-      <span>{Languages[languageL]}</span>
-      <span>
+      <WordCell
+        hidden={languageVisible && !languageVisible.includes(languageL)}
+        color={languageColors[languageL]}
+      >
+        <button onClick={onLanguageClick}>
+          {onLanguageClick && '<'} {Languages[languageL]}
+        </button>
+      </WordCell>
+      <WordCell color={languageColors[languageC]}>
         {Languages[languageC]}{' '}
         {onButtonClick && (
           <AutotranslateButton
@@ -31,8 +57,15 @@ export const LanguageHeader: FC<{
             )}
           </AutotranslateButton>
         )}
-      </span>
-      <span>{Languages[languageR]}</span>
+      </WordCell>
+      <WordCell
+        hidden={languageVisible && !languageVisible.includes(languageR)}
+        color={languageColors[languageR]}
+      >
+        <button onClick={onLanguageClick}>
+          {Languages[languageR]} {onLanguageClick && '>'}
+        </button>
+      </WordCell>
     </LanguageHeaderRoot>
   );
 };

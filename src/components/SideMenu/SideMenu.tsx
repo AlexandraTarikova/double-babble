@@ -4,9 +4,18 @@ import {
   type WordGroupsType,
   type Word,
   SideMenuMode,
+  languageL,
+  languageC,
+  languageR,
 } from '../../data';
 import { WordList } from './WordList';
-import { MenuHeader, MenuZone, ModePanel, TextButton } from './styles';
+import {
+  BackToMapButton,
+  MenuHeader,
+  MenuZone,
+  ModePanel,
+  TextButton,
+} from './styles';
 import { WordAdd } from './WordAdd';
 import type { FC } from 'react';
 import { getNodeLevel } from '../../helpers';
@@ -14,21 +23,36 @@ import { NewTitle } from './NewTitle';
 import { TitleBlock } from './TitleBlock';
 import { TrainMode } from './TrainView';
 import { ProgressView } from './ProgressView';
+import { useMediaQuery } from '@mui/material';
 
 export const SideMenu: FC<{
   nodeInFocus: MapNode;
   onNodeRename: (newName: string) => void;
   onCancelClick: (targetNodeId: string) => void;
+  onCloseClick: () => void;
   onAddWords: (
     targetNodeId: string,
     words: Record<WordGroupsType, Word[]>,
   ) => void;
-}> = ({ nodeInFocus, onNodeRename, onCancelClick, onAddWords }) => {
+}> = ({
+  nodeInFocus,
+  onCloseClick,
+  onNodeRename,
+  onCancelClick,
+  onAddWords,
+}) => {
+  const isSmallScreen = useMediaQuery((t) => t.breakpoints.down('md'));
+  const isExtraSmallScreen = useMediaQuery((t) => t.breakpoints.down('sm'));
   const hasTitle = nodeInFocus?.title !== '';
   const [mode, setMode] = useState<SideMenuMode>(() =>
     hasTitle ? 'words' : 'initial',
   );
   const [trainingKey, setTrainingKey] = useState(0);
+
+  const [sideLanguage, setSideLanguage] = useState(languageL);
+  const languagesVisible = isSmallScreen
+    ? [sideLanguage, languageC]
+    : [languageL, languageC, languageR];
 
   const onSubmitTitle = (newName: string) => {
     onNodeRename(newName);
@@ -53,6 +77,11 @@ export const SideMenu: FC<{
     }
     setMode(newMode);
   };
+
+  const onLanguageClick = isSmallScreen
+    ? () =>
+        setSideLanguage((prev) => (prev === languageL ? languageR : languageL))
+    : undefined;
 
   return (
     <MenuZone>
@@ -80,7 +109,9 @@ export const SideMenu: FC<{
           >
             [PROGRESS]
           </TextButton>
-          <TextButton disabled={mode === 'levelUp'}>[EDIT]</TextButton>
+          {!isExtraSmallScreen && (
+            <TextButton disabled={true}>[EDIT]</TextButton>
+          )}
         </ModePanel>
         {hasTitle && (
           <TitleBlock setMode={setMode} nodeInFocus={nodeInFocus} mode={mode} />
@@ -93,11 +124,18 @@ export const SideMenu: FC<{
         )}
       </MenuHeader>
       {mode === 'words' && (
-        <WordList nodeInFocus={nodeInFocus} onZoomClick={onZoomClick} />
+        <WordList
+          nodeInFocus={nodeInFocus}
+          languagesVisible={languagesVisible}
+          onLanguageClick={onLanguageClick}
+          onZoomClick={onZoomClick}
+        />
       )}
       {mode === 'levelUp' && (
         <WordAdd
           nodeInFocus={nodeInFocus}
+          languagesVisible={languagesVisible}
+          onLanguageClick={onLanguageClick}
           goBack={() => setMode('words')}
           onAddWords={onAddWords}
         />
@@ -105,12 +143,22 @@ export const SideMenu: FC<{
       {mode === 'train' && (
         <TrainMode
           nodeInFocus={nodeInFocus}
+          languagesVisible={languagesVisible}
+          onLanguageClick={onLanguageClick}
           key={trainingKey}
           onResetClick={onResetTrainingClick}
         />
       )}
       {mode === 'progress' && (
-        <ProgressView nodeInFocus={nodeInFocus} onZoomClick={onZoomClick} />
+        <ProgressView
+          nodeInFocus={nodeInFocus}
+          languagesVisible={languagesVisible}
+          onLanguageClick={onLanguageClick}
+          onZoomClick={onZoomClick}
+        />
+      )}
+      {hasTitle && (
+        <BackToMapButton onClick={onCloseClick}>{'<'}</BackToMapButton>
       )}
     </MenuZone>
   );
