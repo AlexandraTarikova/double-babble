@@ -6,14 +6,7 @@ import type {
   Word,
 } from './data';
 import { LinkDirections, WordGroups } from './data';
-import { typedKeys } from './helpers';
-
-const oppositeDirections: Record<LinkDirectionType, LinkDirectionType> = {
-  N: 'S',
-  E: 'W',
-  S: 'N',
-  W: 'E',
-};
+import { oppositeDirections, typedKeys } from './helpers';
 
 const unlinkTargetNode = (
   linkIds: LinkIdsType,

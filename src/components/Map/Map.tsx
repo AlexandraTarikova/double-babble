@@ -1,4 +1,3 @@
-import { LinkDirections } from '../../data';
 import type { LinkDirectionType, MapNode } from '../../data';
 import {
   Fragment,
@@ -21,69 +20,9 @@ import {
   NodeRoot,
   NodeTitle,
 } from './styles';
-import { getNodeLevel } from '../../helpers';
+import { calculateAllPositions, getNodeLevel } from '../../helpers';
 
 const LEVELS_REQUIRED_PER_LINK = 3;
-
-const oppositeDirections: Record<LinkDirectionType, LinkDirectionType> = {
-  N: 'S',
-  E: 'W',
-  S: 'N',
-  W: 'E',
-};
-
-const directionShift: Record<LinkDirectionType, { x: number; y: number }> = {
-  N: { x: 0, y: 1 },
-  E: { x: -1, y: 0 },
-  S: { x: 0, y: -1 },
-  W: { x: 1, y: 0 },
-};
-
-const calculateAllPositions = (
-  nodes: MapNode[],
-  startNode: MapNode | null | undefined,
-): Record<string, { x: number | null; y: number | null }> => {
-  const positions: Record<string, { x: number | null; y: number | null }> =
-    Object.fromEntries(nodes.map((n) => [n.id, { x: null, y: null }]));
-  const walk = (
-    currentNode: MapNode | null | undefined,
-    directionProp: LinkDirectionType | 'start',
-  ) => {
-    if (
-      !currentNode ||
-      (positions[currentNode.id]?.x !== null && directionProp !== 'start')
-    ) {
-      return;
-    }
-
-    if (directionProp === 'start') {
-      positions[currentNode.id] = { x: 0, y: 0 };
-    } else if (currentNode.linkIds[directionProp]) {
-      const parentId = currentNode.linkIds[directionProp];
-      const parentPosition = positions[parentId];
-
-      if (parentPosition?.x !== null && parentPosition?.y !== null) {
-        positions[currentNode.id] = {
-          x: parentPosition.x + directionShift[directionProp].x,
-          y: parentPosition.y + directionShift[directionProp].y,
-        };
-      }
-    }
-
-    //looping through links of current node, excluding the directionwe came from
-    LinkDirections.forEach((direction) => {
-      const nextNodeId = currentNode.linkIds[direction];
-      if (direction !== directionProp && nextNodeId) {
-        const nextNode = nodes.find((node) => node.id === nextNodeId);
-        walk(nextNode, oppositeDirections[direction]);
-      }
-    });
-  };
-
-  walk(startNode, 'start');
-
-  return positions;
-};
 
 const mapToScale = (value: number, min: number, max: number): number => {
   if (min === max) return 1;
@@ -106,6 +45,7 @@ export const Map: FC<{
   onAddNodeClick,
   onMapClick,
 }) => {
+  const rootNodeId = nodes[0]?.id;
   const [nodeCenteredId, setNodeCenteredId] = useState<string | null>(null);
   const [nodeLevelPulsingId, setNodeLevelPulsingId] = useState<string | null>(
     null,
@@ -172,9 +112,11 @@ export const Map: FC<{
     ).length;
     e.stopPropagation();
 
+    const childrenAmount = linksAmount - (targetNode.id === rootNodeId ? 0 : 1);
+
     if (
-      linksAmount >=
-      Math.floor(getNodeLevel(targetNode) / LEVELS_REQUIRED_PER_LINK) + 1
+      childrenAmount >=
+      Math.floor(getNodeLevel(targetNode) / LEVELS_REQUIRED_PER_LINK)
     ) {
       handleDisabledClick(targetNode.id);
       return;
@@ -292,6 +234,7 @@ export const Map: FC<{
           const linksAmount = Object.values(node.linkIds).filter(
             (id) => id !== null,
           ).length;
+          const childrenAmount = linksAmount - (node.id === rootNodeId ? 0 : 1);
           return (
             <Fragment key={node.id}>
               {node.linkIds.S && (
@@ -343,7 +286,7 @@ export const Map: FC<{
                 </NodeTitle>
                 <NodeLevel
                   animated={nodeLevelPulsingId === node.id}
-                  closestBreakpoint={`${(linksAmount * LEVELS_REQUIRED_PER_LINK).toString()}`}
+                  closestBreakpoint={`${((childrenAmount + 1) * LEVELS_REQUIRED_PER_LINK).toString()}`}
                   onAnimationEnd={() => {
                     if (nodeLevelPulsingId === node.id) {
                       setNodeLevelPulsingId(null);

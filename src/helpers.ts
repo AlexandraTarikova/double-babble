@@ -1,6 +1,8 @@
 import {
+  LinkDirections,
   WordGroups,
   type Language,
+  type LinkDirectionType,
   type MapNode,
   type WordGroupsType,
 } from './data';
@@ -77,3 +79,64 @@ export function getWordKey({
 }) {
   return `${group}__${wordFrom}__from-${from}-to-${to}__${wordTo}`;
 }
+
+export const oppositeDirections: Record<LinkDirectionType, LinkDirectionType> =
+  {
+    N: 'S',
+    E: 'W',
+    S: 'N',
+    W: 'E',
+  };
+
+const directionShift: Record<LinkDirectionType, { x: number; y: number }> = {
+  N: { x: 0, y: 1 },
+  E: { x: -1, y: 0 },
+  S: { x: 0, y: -1 },
+  W: { x: 1, y: 0 },
+};
+
+export const calculateAllPositions = (
+  nodes: MapNode[],
+  startNode: MapNode | null | undefined,
+): Record<string, { x: number | null; y: number | null }> => {
+  const positions: Record<string, { x: number | null; y: number | null }> =
+    Object.fromEntries(nodes.map((n) => [n.id, { x: null, y: null }]));
+  const walk = (
+    currentNode: MapNode | null | undefined,
+    directionProp: LinkDirectionType | 'start',
+  ) => {
+    if (
+      !currentNode ||
+      (positions[currentNode.id]?.x !== null && directionProp !== 'start')
+    ) {
+      return;
+    }
+
+    if (directionProp === 'start') {
+      positions[currentNode.id] = { x: 0, y: 0 };
+    } else if (currentNode.linkIds[directionProp]) {
+      const parentId = currentNode.linkIds[directionProp];
+      const parentPosition = positions[parentId];
+
+      if (parentPosition?.x !== null && parentPosition?.y !== null) {
+        positions[currentNode.id] = {
+          x: parentPosition.x + directionShift[directionProp].x,
+          y: parentPosition.y + directionShift[directionProp].y,
+        };
+      }
+    }
+
+    //looping through links of current node, excluding the directionwe came from
+    LinkDirections.forEach((direction) => {
+      const nextNodeId = currentNode.linkIds[direction];
+      if (direction !== directionProp && nextNodeId) {
+        const nextNode = nodes.find((node) => node.id === nextNodeId);
+        walk(nextNode, oppositeDirections[direction]);
+      }
+    });
+  };
+
+  walk(startNode, 'start');
+
+  return positions;
+};

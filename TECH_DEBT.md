@@ -32,16 +32,16 @@ drift again, `grep` beats trusting them.
 - **The next big thing is a backend**, as a fullstack learning project. "Before the backend"
   lists what the current code has already decided for you. The inner-maps experiment was the
   last data-model question to settle first.
-- **The game loop closes and branches.** Add words → level up → node grows → branch. Child #k
-  of a non-root node needs level `3k`; a lone root gets its first branch free. `[+]` only
-  appears on titled nodes now (`Map.tsx:263-290`).
+- **The game loop closes and branches.** Add words → level up → node grows → branch. **Every
+  node's child #k needs level `3k`** — root included; the root's free first branch is gone
+  (2026-10-15). `[+]` only appears on titled nodes (`Map.tsx:205-232`).
 - **TRAIN v1 and PROGRESS "general" work.** Training results live in a second store — T6.
-- **`level` is derived, not stored.** `getNodeLevel(node)` (`helpers.ts:43`) against
-  `REQUIRED_WORDS_PER_LEVEL` (`helpers.ts:37`, currently 2/1/1).
-- **Ids come from `createId()`** (`helpers.ts:8`), not `crypto.randomUUID()`, which only
+- **`level` is derived, not stored.** `getNodeLevel(node)` (`helpers.ts:45`) against
+  `REQUIRED_WORDS_PER_LEVEL` (`helpers.ts:39`, currently 2/1/1).
+- **Ids come from `createId()`** (`helpers.ts:10`), not `crypto.randomUUID()`, which only
   exists on HTTPS / `localhost` and so breaks testing on a phone via `http://<LAN-IP>`.
 - **Autotranslate works, and fails cleanly.** T5 — and it says why not to reopen it.
-- **The hard part works.** `calculateAllPositions` (`Map.tsx:42`) — and it needed no changes
+- **The hard part works.** `calculateAllPositions` (`helpers.ts:98`, moved out of `Map.tsx`) — and it needed no changes
   for inner maps, which is the clearest sign the layout-from-links bet was right.
 - ~5,340 lines across 25 files, ~2,500 of them demo vocabulary in `nodesDemo.ts`.
 
@@ -60,13 +60,17 @@ Each map — the top level, and each inner map — is one connected graph. `Map`
 one map at a time (`nodesToDisplay`, `App.tsx:74`). Verified 2026-09-08 for the outer demo
 map. **Four** separate pieces of code depend on this:
 
-- `calculateAllPositions` (`Map.tsx:42`) only positions nodes reachable from its start
+- `calculateAllPositions` (`helpers.ts:98`) only positions nodes reachable from its start
   node. Unreachable nodes keep `{x: null, y: null}`.
-- The render bails with a bare `return` on a null position (`Map.tsx:259`), so an
+- The render bails with a bare `return` on a null position (`Map.tsx:201`), so an
   unreachable node **renders as nothing at all**. Silent data loss from the user's view.
-- `nodes[0]` of the current map is the layout anchor (`Map.tsx:124`). For an inner map that's
-  the node `addRootNode` created, because it's appended before any of its children.
-- `canExpandN/E/S/W` (`Map.tsx:271-290`) test cell occupancy *only*, not the `linkIds` slot.
+- `nodes[0]` of the current map is the layout anchor (`Map.tsx:64`) **and, since 2026-10-15,
+  the map's root for the branch gate** (`rootNodeId`, `Map.tsx:48`). For the top level that's
+  `createEmptyMap`'s node; for an inner map it's the node `addRootNode` created. Both are
+  appended before any of their children, and an untitled root can't have children, so the
+  only deletable node is never a root with a subtree. See T2.5 — insertion order is now
+  load-bearing for a game rule, not just for layout.
+- `canExpandN/E/S/W` (`Map.tsx:213-232`) test cell occupancy *only*, not the `linkIds` slot.
   Correct **because** a linked neighbour always occupies the adjacent cell. If a linked node
   is ever unpositioned, a `[+]` renders over a live link and clicking it overwrites
   `linkIds`, orphaning the old neighbour.
@@ -85,13 +89,13 @@ have to words you want. Enforce it when *mutating* state and let the layout assu
    (`SideMenu.tsx:132`); the only `setMode('levelUp')` is in `TitleBlock.tsx:33`, which renders
    only inside `{hasTitle && …}` (`SideMenu.tsx:114`). `key={nodeInFocus.id}` (`App.tsx:177`)
    resets `mode` per node.
-3. **An untitled node can't branch.** Two layers now. The UI doesn't render `[+]` on an
-   untitled node at all (`hasTitle`, `Map.tsx:263`, used in each `canExpand*`). Behind that,
-   the gate (`Map.tsx:175-177`) blocks a level-0 node that already has one link. The
-   zero-link edge case — a fresh map's only node, which the gate would let branch once — used
-   to be safe only because the result is still a leaf; with `hasTitle` it can't happen. That
-   matters more now, because *every* inner map starts as exactly that node. If gate logic
-   moves to `rules.ts` for a server, "must have a title to branch" goes with it.
+3. **An untitled node can't branch.** Two layers. The UI doesn't render `[+]` on an untitled
+   node at all (`hasTitle`, `Map.tsx:205`, used in each `canExpand*`). Behind that, the gate
+   (`Map.tsx:117-119`) blocks any level-0 node: it counts *children* — links minus the one
+   back to the parent, none for the map's root (`Map.tsx:115`) — and allows a branch only
+   while `childrenAmount < floor(level / 3)`. At level 0 that's never. (The old zero-link edge
+   case, where a map's lone node could branch once at level 0, is gone with the free branch.)
+   If gate logic moves to `rules.ts` for a server, "must have a title" goes with it.
 4. `DebugPanel`'s `set` bypasses all of this by design; no demo node is untitled.
 
 **What breaks it: condition 1 dying.** A delete path for a *titled* node (T4) lets the
@@ -102,7 +106,7 @@ reducer's `delete` case (`nodesReducer.ts:151`) split a map. Leaf-only, same com
 `addNode` creates a fresh node with exactly one link back to its parent; `addRootNode` creates
 an unlinked node in an *empty* map. Neither can close a cycle.
 
-- **The layout anchor doesn't matter.** `positionsNormalized` (`Map.tsx:139`) subtracts
+- **The layout anchor doesn't matter.** `positionsNormalized` (`Map.tsx:79`) subtracts
   `minX`/`minY`. It stops being harmless the moment invariant 1 breaks.
 - **Exactly one path between any two nodes** of a map.
 - **"Make room" is well-defined** — see Parked.
@@ -172,7 +176,7 @@ changes — each map is just a smaller input.
   nothing keeping the two in step — the same reason stored `level` was deleted. Children are
   derived.
 - **`parentId` → `outerNodeId`.** "Parent" already means "the node you branched from" in the
-  link graph (`Map.tsx:62` still has a local `parentId` in that sense, and that's correct).
+  link graph (`helpers.ts:118` still has a local `parentId` in that sense, and that's correct).
 - **Exactly one inner level.** Enforced in the reducer (`addRootNode` refuses an outer node
   that is itself inner) and in the UI (an inner node only gets a zoom-*out* button,
   `WordList.tsx:32-37`, which goes straight to the top level).
@@ -205,7 +209,7 @@ changes — each map is just a smaller input.
       something. If that's it, it's another point for the empty-state version above.
 - [ ] **The demo has one inner node** (`cabin` in `forest`), unlinked. Linked inner layouts
       have only been tested by playing. Worth a few linked inner nodes in `nodesDemo.ts`.
-- [ ] **Small.** `isZoomed={!!nodeZoomedId}` (`Map.tsx:254`) uses the id rather than the
+- [ ] **Small.** `isZoomed={!!nodeZoomedId}` (`Map.tsx:196`) uses the id rather than the
       looked-up node; harmless now that both resets clear it. `MapHeader` / `MapTitle` /
       `LeftColumn` are styled components exported from `App.tsx:31-54` — the only file
       mixing styles and wiring. Typo "non-emty" in the `addRootNode` error message.
@@ -230,6 +234,10 @@ build, so you meet them on purpose rather than by surprise.
   **Links are worth their own table** (`from_id`, `to_id`, `direction`): `linkIds` stores
   every link twice and invariant 3 exists only to keep the copies agreeing. The trade-off is
   rebuilding `linkIds` on load, or teaching the walk to read edges.
+  **And each map needs an explicit root.** The client uses "first node of the map" as the root
+  for both layout and the branch gate (T2.5); rows have no order without `ORDER BY`, so the
+  schema should say which node is the root (`root_node_id` on the outer node / a maps table,
+  or an `is_root` flag).
 - **Client-minted ids are the right shape.** A retried POST can be made idempotent (the server
   already has that node id), and the client never waits for the server to name a node.
 - **The reducer is the business logic, and it's pure.** `nodesReducer.ts` imports only from
@@ -284,8 +292,18 @@ never rejects** — failures sit in the results array; nothing reaches `catch`.
 per-pair history; PROGRESS shows the last five as dots.
 
 **T2.2 + T2.3 — branch gate back on, hint correct** ✅ 2026-10-06 (`b973ec3`). The `+ 1`
-stops the incoming link counting. The hint (`Map.tsx:346`) only shows on a blocked click, where
-`3 × linksAmount` is exactly the unblocking level. Words per level went 5/2/2 → 2/1/1.
+stopped the incoming link counting. The hint only shows on a blocked click. Words per level
+went 5/2/2 → 2/1/1.
+
+**No free branch for the root** ✅ 2026-10-15. The `+ 1` above stood for "the link back to the
+parent", which every node has *except* its map's root — so the root got an extra branch (first
+child at level 0, second at 3). A first attempt keyed the offset on "map has one node", which
+only moved the free branch to level 3 (first *and* second child at 3). The real fix counts
+children instead of links: `childrenAmount = linksAmount - (isRoot ? 0 : 1)` (`Map.tsx:115`,
+`:237`), blocked while `childrenAmount >= floor(level / 3)`, hint `(childrenAmount + 1) × 3`
+(`:289`). Child #k at level `3k` for every node, and the gate and hint share one quantity so
+they can't disagree. Also moved `calculateAllPositions` and `oppositeDirections` to
+`helpers.ts` (T2.8 done).
 
 **T2.12 (half) — demo data moved** ✅ 2026-10-06 — `nodesDemo.ts`, and `data.ts` 754 → 64.
 
@@ -301,7 +319,7 @@ stops the incoming link counting. The hint (`Map.tsx:346`) only shows on a block
   purpose.
 - `100vh` → `100dvh`. `index.css`'s Vite light-mode block gone; `:root` is
   `color-scheme: dark; color: #fff; background: #361c2e`.
-- Keys fixed: `<Fragment key={node.id}>` (`Map.tsx:296`), `WordGroup`, `WordCell`, and
+- Keys fixed: `<Fragment key={node.id}>` (`Map.tsx:239`), `WordGroup`, `WordCell`, and
   `ProgressView`'s tabs and dots.
 
 **Inner maps MVP** ✅ 2026-10-15 — see the "Inner maps" section.
@@ -347,25 +365,33 @@ Accepted on purpose to wrap mobile up; none of these blocks using it. A real mob
         appends without dedup — your uniqueness TODO from the render side. `${group}_${index}`
         is the honest key; `WordAdd.tsx:233` already does it.
       **Lint will never catch these** — `eslint-plugin-react` isn't installed.
-- [ ] **5. The layout anchor is implicit.** `20min` — `calculateAllPositions(nodes, nodes[0])`
-      (`Map.tsx:124`). Per map now, and for inner maps it happens to be the `addRootNode` node.
-      Store a root id per map, or comment why `nodes[0]` is safe.
+- [ ] **5. The root is implicit — and now a game rule depends on it.** `20min`
+      `calculateAllPositions(nodes, nodes[0])` (`Map.tsx:64`) and `rootNodeId = nodes[0]?.id`
+      (`Map.tsx:48`) both treat the first node of a map as its root. Correct today (see
+      invariant 1), but it used to only affect *which* fragment of a broken map you'd see;
+      now it decides how many branches a node gets. **For the backend this is the important
+      one:** a SQL query returns rows in no guaranteed order without `ORDER BY`, so "first
+      row" isn't a root marker. Store it — a `root_node_id` per map, or an `is_root` flag —
+      rather than relying on insertion order.
 - [ ] **6. Unreachable nodes vanish, and empty-map math produces garbage.** `20min`
-      Bare `return` at `Map.tsx:259`. `Math.min(...[])` is `Infinity` (`:128`, `:133`),
-      `Math.max(...[])` is `-Infinity` (`mapWidth` `:188`, `mapHeight` `:197`, `maxLevel`
-      `:153`). Unreachable today — `addRootNode` on zoom means no map renders empty — but the
+      Bare `return` at `Map.tsx:201`. `Math.min(...[])` is `Infinity` (`:68`, `:73`),
+      `Math.max(...[])` is `-Infinity` (`mapWidth` `:130`, `mapHeight` `:139`, `maxLevel`
+      `:93`). Unreachable today — `addRootNode` on zoom means no map renders empty — but the
       empty-state version of inner maps would make empty maps a real state.
-- [ ] **8. `oppositeDirections` is copy-pasted.** `5min` — `nodesReducer.ts:11`, `Map.tsx:28`.
+- [x] **8. `oppositeDirections` is copy-pasted.** ✅ 2026-10-15 — one copy in `helpers.ts:83`,
+      imported by the reducer.
 - [ ] **9. Game rules are scattered.** `20min` — **the backend makes this one matter.**
-      `LEVELS_REQUIRED_PER_LINK` (`Map.tsx:26`) and the gate formula inline in a click handler
-      (`Map.tsx:175-177`), next to the hint (`:346`) and the new "must have a title" check
-      (`:263`); `REQUIRED_WORDS_PER_LEVEL` and `getNodeLevel` in `helpers.ts:37`, `:43`. A
-      `rules.ts` with `canBranch(node)` / `nextBranchLevel(node)` is what a server imports to
-      validate an `addNode`.
+      `LEVELS_REQUIRED_PER_LINK` (`Map.tsx:25`), the gate inline in a click handler
+      (`Map.tsx:115-119`), the same `childrenAmount` computed again for the hint (`:237`,
+      `:289`), and the "must have a title" check (`:205`); `REQUIRED_WORDS_PER_LEVEL` and
+      `getNodeLevel` in `helpers.ts:39`, `:45`. A `rules.ts` with `childrenAmount(node,
+      rootId)`, `canBranch(node, rootId)` and `nextBranchLevel(node, rootId)` is what a server
+      imports to validate an `addNode`. `helpers.ts` is turning into a grab-bag (ids, node
+      creation, level rules, word keys, layout) — rules there, layout in its own file.
 - [ ] **10. Palette lives in the side menu's styles.** `5min` — `SideMenu/styles.ts:4-15`.
       `Theme.ts:53` still hardcodes `color: 'white'`.
 - [ ] **11. `direction` leaks to the DOM.** `5min` — `NodeAddButton` filters `"position"`
-      (`Map/styles.ts:134`) but the prop is `direction` (`Map.tsx:358`).
+      (`Map/styles.ts:134`) but the prop is `direction` (`Map.tsx:301`).
 - [ ] **12. `DebugPanel` ships to users.** `5min` — gate it behind `import.meta.env.DEV`
       instead of the width check (`DebugPanel.tsx:52`); drops `nodesDemo.ts` out of the
       427 KB bundle. And it pairs `resetHistoryTo` with a raw `dispatchNodes`, correct only
@@ -403,7 +429,7 @@ All refs in `storageHistory.ts`. Several of these change shape once there's a se
 - [ ] **PROGRESS "errors" / "time"** — disabled tabs (`ProgressView.tsx:39`). Fix T6's
       `lastCheck` first.
 - [ ] **Zoomable map** `deep` — `transform: scale()` + wheel/pinch; `scrollToNode`
-      (`Map.tsx:206`) needs the scale. Not to be confused with inner-map "zoom", which is
+      (`Map.tsx:148`) needs the scale. Not to be confused with inner-map "zoom", which is
       navigation.
 - [ ] **Search: find a node by a word in it** `1h` — now has to search across maps and
       zoom to the right one first. A natural first server query.
@@ -442,7 +468,7 @@ first two have teeth.
 
 **None of this is critical.** Re-read "Before the backend" before syncing this store.
 
-- [ ] **Records are keyed by word text** (`getWordKey`, `helpers.ts:65`). Same pair in two
+- [ ] **Records are keyed by word text** (`getWordKey`, `helpers.ts:67`). Same pair in two
       nodes — or in an inner and an outer map — shares a record; editing a word orphans its
       history; the group is part of the key, matching your uniqueness TODO.
 - [ ] **`lastCheck: Date` is a type lie after a reload.** `5min` — `data.ts:40` vs
@@ -476,7 +502,7 @@ first two have teeth.
 
 - **Making room / stretchable edges.** `deep`. Really "incremental grid layout with constraint
   propagation". Variable-length edges would be a distance per link in `directionShift`
-  (`Map.tsx:35`).
+  (`helpers.ts:91`).
 - **Dynamic non-grid graph.** Invalidates `calculateAllPositions`, `scrollToNode`, `canExpand*`.
 - **Tests.** None, and fine. Candidates: `calculateAllPositions`, the gate once it's in
   `rules.ts`, and now `addRootNode`'s three refusals. **A backend changes this calculus** —
@@ -493,7 +519,8 @@ flat `nodes` table with a nullable `outer_node_id`.
 
 Two decisions first — "Before the backend" has the reasoning:
 1. **Store actions or store nodes?** A log on the server keeps your architecture; a node
-   table is the conventional CRUD shape. And either way: **links as their own table?**
+   table is the conventional CRUD shape. And either way: **links as their own table?** and
+   **where does "this is the root" live?** (T2.5)
 2. **What does a server refuse?** The invariants are the list. `addRootNode` already does its
    checks in the reducer — that's the pattern; T2.9's `rules.ts` is the next piece.
 
@@ -504,4 +531,4 @@ Cheap things worth doing before the first server commit, while there's one copy 
 - `README.md`.
 
 In downtime, by appetite: the inner-maps empty state, T4 delete a node, T4 search (now
-cross-map), Mobile v1 leftovers, T2.8 / T2.11.
+cross-map), Mobile v1 leftovers, T2.11.

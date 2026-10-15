@@ -33,8 +33,9 @@ that belongs to it. Learning vocabulary is what makes the map grow.
   `REQUIRED_WORDS_PER_LEVEL` (currently 2 nouns / 1 verb / 1 adjective per level). The
   lowest group wins, so you can't level up on nouns alone.
 - Levelling up unlocks **branching**: a node can grow a neighbour in one of four directions
-  (N/E/S/W). Each new branch costs `LEVELS_REQUIRED_PER_LINK` (3) more levels; the link back
-  to the parent doesn't count, and a lone root node gets its first branch for free.
+  (N/E/S/W). A node's k-th child needs level `3k` (`LEVELS_REQUIRED_PER_LINK`), the same for
+  every node — the gate counts children, so the link back to the parent doesn't count, and
+  the root of a map (its first node) gets no free branch.
 - Each word carries **three translations** — the two languages you're learning, plus English
   as the pivot in the middle. Currently French / English / Swedish, declared once in
   `data.ts` as `languageL` / `languageC` / `languageR` (see `TECH_DEBT.md`, T4 "configurable
@@ -73,7 +74,7 @@ Each one replaces stored state with a function of other state. This is the main 
 codebase, and worth knowing before suggesting anything:
 
 1. **Layout is derived from links.** Nodes have no coordinates. `calculateAllPositions`
-   (`Map.tsx`) walks the link graph from an anchor node and computes a grid position for
+   (`helpers.ts`) walks the link graph from an anchor node and computes a grid position for
    everything it reaches, then the render normalizes by the minimum. Consequence: a node the
    walk can't reach has no position and renders as nothing.
 2. **Level is derived from word counts.** `getNodeLevel(node)` (`helpers.ts`). There is no
@@ -110,7 +111,8 @@ part that doesn't fit. `TECH_DEBT.md` → "Before the backend" has the detail.
 - `src/data.ts` — types and the language triple
 - `src/nodesDemo.ts` — the demo map `DebugPanel` loads (almost all of the repo's line count)
 - `src/helpers.ts` — `createId`, `createNode`, `getNodeLevel`, the levelling constant,
-  `getWordKey`. `createId` is a hand-rolled v4 UUID because `crypto.randomUUID()` only exists
+  `getWordKey`, and the layout walk `calculateAllPositions` (moved out of `Map.tsx`; the
+  branch gate itself still lives in `Map.tsx`). `createId` is a hand-rolled v4 UUID because `crypto.randomUUID()` only exists
   on HTTPS / `localhost`, which breaks testing on a phone over the LAN.
 - `src/nodesReducer.ts` — every state transition: `addNode` / `addRootNode` (first node of an
   inner map; refuses unless the map is empty and one level deep) / `edit` / `delete` / `set` /
