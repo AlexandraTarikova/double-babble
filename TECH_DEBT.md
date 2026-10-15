@@ -2,6 +2,7 @@
 
 TODO: add checking work uniqueness when adding new ones - remember to allow repeats if 
 different categories
+TODO: fix fonts flashing on page load
 
 ----
 
