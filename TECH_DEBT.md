@@ -10,11 +10,11 @@ different categories
 # Double Babble — resume checklist
 
 Written 2026-08-13 after a few months away. Updated 2026-09-26, 2026-10-06 (TRAIN, PROGRESS,
-branch gate), and 2026-10-13 (mobile v1, right before starting on a backend).
+branch gate), 2026-10-13 (mobile v1), and 2026-10-15 (inner maps MVP).
 Every box is meant to be one sitting.
 Tags: `5min` `20min` `1h` `deep` — pick by how much brain you have today.
 
-Line numbers below were re-verified on 2026-10-13 against the mobile-v1 working tree. If they
+Line numbers below were re-verified on 2026-10-15 against the inner-maps working tree. If they
 drift again, `grep` beats trusting them.
 
 ---
@@ -22,181 +22,235 @@ drift again, `grep` beats trusting them.
 ## Where things stand
 
 - **`npm run build`, `npm run lint` and `npx prettier --check src/` are all clean.** Bundle is
-  423 KB. `noUnusedLocals` / `noUnusedParameters` are still commented out in
+  427 KB. `noUnusedLocals` / `noUnusedParameters` are still commented out in
   `tsconfig.app.json:20-21`; lint has been at zero for a while, so they can come back on.
-- **Mobile v1 is done**, and it's deliberately "usable", not "designed". Below 900px (`md`)
-  the side menu goes full-screen, shows two language columns with a toggle for which outer
-  one, and moves the mode buttons to a fixed bottom bar. Good from ~500–900px, OK down to
-  ~400px, below that needs a real mobile design. Leftovers are in the "Mobile v1" section.
-- **The next big thing is a backend**, as a fullstack learning project rather than something
-  the game needs. The "Before the backend" section lists what the current code has already
-  decided for you. Features may still happen in between.
-- **The game loop closes and branches.** Add words → level up → node grows → branch. The
-  gate is on; child #k of a non-root node needs level `3k`, and a lone root gets its first
-  branch free.
-- **TRAIN v1 and PROGRESS "general" work.** Training results live in a second, simpler
-  store — T6.
-- **`level` is derived, not stored.** `getNodeLevel(node)` (`helpers.ts:44`) against
-  `REQUIRED_WORDS_PER_LEVEL` (`helpers.ts:38`, currently 2/1/1).
-- **Ids come from `createId()`** (`helpers.ts:8`), a hand-rolled v4 UUID on
-  `crypto.getRandomValues`, not `crypto.randomUUID()`. Keep it that way: `randomUUID` only
-  exists in a *secure context* (HTTPS or `localhost`), so it's `undefined` when you open the
-  dev server on your phone via `http://<LAN-IP>`. `getRandomValues` has no such restriction.
+- **Inner maps MVP works** (2026-10-15). A node can hold one inner map — exactly one level
+  deep — and the whole thing is still a single flat `nodes` array, scoped by `outerNodeId`.
+  It's an experiment to check whether inner maps behave like the outer one before the DB
+  design; see the "Inner maps" section for the model, the decisions and what's still open.
+- **Mobile v1 is done**, deliberately "usable", not "designed". Leftovers in "Mobile v1".
+- **The next big thing is a backend**, as a fullstack learning project. "Before the backend"
+  lists what the current code has already decided for you. The inner-maps experiment was the
+  last data-model question to settle first.
+- **The game loop closes and branches.** Add words → level up → node grows → branch. Child #k
+  of a non-root node needs level `3k`; a lone root gets its first branch free. `[+]` only
+  appears on titled nodes now (`Map.tsx:263-290`).
+- **TRAIN v1 and PROGRESS "general" work.** Training results live in a second store — T6.
+- **`level` is derived, not stored.** `getNodeLevel(node)` (`helpers.ts:43`) against
+  `REQUIRED_WORDS_PER_LEVEL` (`helpers.ts:37`, currently 2/1/1).
+- **Ids come from `createId()`** (`helpers.ts:8`), not `crypto.randomUUID()`, which only
+  exists on HTTPS / `localhost` and so breaks testing on a phone via `http://<LAN-IP>`.
 - **Autotranslate works, and fails cleanly.** T5 — and it says why not to reopen it.
-- **The hard part works.** `calculateAllPositions` (`Map.tsx:42`). Don't rewrite it.
-- **`parentId` is still `null` on every node** (`helpers.ts:27`, and all demo nodes). A door
-  left open, not a usable field.
-- ~5,050 lines across 25 files, 2,304 of them demo vocabulary in `nodesDemo.ts`. `data.ts`
-  is down to 65 lines of types.
+- **The hard part works.** `calculateAllPositions` (`Map.tsx:42`) — and it needed no changes
+  for inner maps, which is the clearest sign the layout-from-links bet was right.
+- ~5,340 lines across 25 files, ~2,500 of them demo vocabulary in `nodesDemo.ts`.
 
 ---
 
 ## Invariants — the rules the code quietly depends on
 
 These aren't tasks. They're assumptions that are load-bearing in several places at once, so
-breaking one produces a bug that surfaces somewhere unrelated. **All four matter more once
-there's a server**, because a server is a second place that can create, change or replay
-state — see "Before the backend".
+breaking one produces a bug that surfaces somewhere unrelated. **With inner maps, 1–3 apply
+per map, not to the whole array**, and there's a fifth. **All of them matter more once there's
+a server**, because a server is a second place that can create, change or replay state.
 
-### 1. The node graph is always connected.
+### 1. Every map is connected.
 
-Verified 2026-09-08 by walking all 7 demo nodes as anchor. **Four** separate pieces of
-code depend on this:
+Each map — the top level, and each inner map — is one connected graph. `Map` only ever sees
+one map at a time (`nodesToDisplay`, `App.tsx:74`). Verified 2026-09-08 for the outer demo
+map. **Four** separate pieces of code depend on this:
 
 - `calculateAllPositions` (`Map.tsx:42`) only positions nodes reachable from its start
   node. Unreachable nodes keep `{x: null, y: null}`.
-- The render bails with a bare `return` on a null position (`Map.tsx:247`), so an
+- The render bails with a bare `return` on a null position (`Map.tsx:259`), so an
   unreachable node **renders as nothing at all**. Silent data loss from the user's view.
-- `nodes[0]` is the layout anchor (`Map.tsx:116`). Safe only because every anchor reaches
-  every node — see invariant 2.
-- `canExpandN/E/S/W` (`Map.tsx:258-269`) test cell occupancy *only*, not the `linkIds`
-  slot. That's correct **because** a linked neighbour always occupies the adjacent cell —
-  which requires it to have a position. If a linked node is ever unpositioned, a `[+]`
-  renders over a live link and clicking it overwrites `linkIds`, orphaning the old
-  neighbour. Worth a one-line comment at `Map.tsx:258`.
+- `nodes[0]` of the current map is the layout anchor (`Map.tsx:124`). For an inner map that's
+  the node `addRootNode` created, because it's appended before any of its children.
+- `canExpandN/E/S/W` (`Map.tsx:271-290`) test cell occupancy *only*, not the `linkIds` slot.
+  Correct **because** a linked neighbour always occupies the adjacent cell. If a linked node
+  is ever unpositioned, a `[+]` renders over a live link and clicking it overwrites
+  `linkIds`, orphaning the old neighbour.
 
-**This is also the core game mechanic**, not just an implementation detail: the whole point
-is building a path from words you have to words you want. So enforce it when *mutating*
-state and let the layout assume it. See T4 "Delete a node".
+**This is also the core game mechanic**: the whole point is building a path from words you
+have to words you want. Enforce it when *mutating* state and let the layout assume it.
 
-**It holds — re-verified 2026-10-13.** Nothing checks it; it survives on a chain of four
-facts across four files:
+**It holds — re-verified 2026-10-15.** Nothing checks it in one place; it survives on:
 
-1. **Only an untitled node can be deleted.** The only delete path in the UI is the `x` in
-   `NewTitle.tsx:38` → `onCancelNewNodeClick` (`App.tsx:71`), and `NewTitle` renders only
-   inside `{!hasTitle && …}` (`SideMenu.tsx:119`). The new mobile back button
-   (`SideMenu.tsx:160`) only *closes* the menu, so it isn't a second path.
-2. **An untitled node is permanently level 0.** `WordAdd`, the only UI that adds words,
-   renders on `mode === 'levelUp'` (`SideMenu.tsx:134`). The only `setMode('levelUp')` is the
-   `[+]` in `TitleBlock.tsx:33`, and `TitleBlock` renders only inside `{hasTitle && …}`
-   (`SideMenu.tsx:116`). `key={nodeInFocus.id}` (`App.tsx:109`) resets `mode` per node.
-3. **The branch gate blocks a level-0 node that already has a link.** `Map.tsx:166-169`:
-   blocked when `linksAmount >= floor(level / 3) + 1`, so at level 0 with one link it's
-   blocked. A node with *zero* links passes — only ever the single, untitled node of a fresh
-   map — and it can get exactly one child, after which it's a leaf. Still safe.
-   (Mobile shows every node's `[+]` all the time, `Map/styles.ts:106-109`. Visibility only —
-   every click still goes through the gate.)
-4. `DebugPanel`'s `set` bypasses every guard above by design, but `grep -c "title: ''"
-   src/nodesDemo.ts` returns `0` — no demo node is untitled.
+1. **Only an untitled node can be deleted.** The only delete path is the `x` in
+   `NewTitle.tsx:38` → `onCancelNewNodeClick` (`App.tsx:112`), and `NewTitle` renders only
+   inside `{!hasTitle && …}` (`SideMenu.tsx:117`). The guard is now
+   `nodesToDisplay.length > 1` (`App.tsx:113`) — per map — so the only node of a map, e.g. an
+   inner map's placeholder root, can't be deleted.
+2. **An untitled node is permanently level 0.** `WordAdd` renders on `mode === 'levelUp'`
+   (`SideMenu.tsx:132`); the only `setMode('levelUp')` is in `TitleBlock.tsx:33`, which renders
+   only inside `{hasTitle && …}` (`SideMenu.tsx:114`). `key={nodeInFocus.id}` (`App.tsx:177`)
+   resets `mode` per node.
+3. **An untitled node can't branch.** Two layers now. The UI doesn't render `[+]` on an
+   untitled node at all (`hasTitle`, `Map.tsx:263`, used in each `canExpand*`). Behind that,
+   the gate (`Map.tsx:175-177`) blocks a level-0 node that already has one link. The
+   zero-link edge case — a fresh map's only node, which the gate would let branch once — used
+   to be safe only because the result is still a leaf; with `hasTitle` it can't happen. That
+   matters more now, because *every* inner map starts as exactly that node. If gate logic
+   moves to `rules.ts` for a server, "must have a title to branch" goes with it.
+4. `DebugPanel`'s `set` bypasses all of this by design; no demo node is untitled.
 
-`App.tsx:72`'s `nodes.length > 1` is not part of this chain; it stops the map going *empty*.
+**What breaks it: condition 1 dying.** A delete path for a *titled* node (T4) lets the
+reducer's `delete` case (`nodesReducer.ts:151`) split a map. Leaf-only, same commit.
 
-**What breaks it: condition 1 dying.** The moment a delete path exists for a *titled* node —
-T4 "Delete a node" — the reducer's `delete` case (`nodesReducer.ts:124`) will split the graph
-quite happily. The leaf-only check has to land in the same commit as that UI.
+### 2. Every map is a tree, by construction.
 
-### 2. The graph is a tree, by construction.
+`addNode` creates a fresh node with exactly one link back to its parent; `addRootNode` creates
+an unlinked node in an *empty* map. Neither can close a cycle.
 
-Every add creates a fresh node with exactly one link back to its parent, so you can never
-close a cycle. 7 nodes / 6 edges, and that ratio is structurally locked.
-
-- **The layout anchor doesn't matter.** `positionsNormalized` (`Map.tsx:131`) subtracts
-  `minX`/`minY`, so the layout is translation-invariant — verified identical from all 7
-  anchors. It stops being harmless the moment invariant 1 breaks.
-- **Exactly one path between any two nodes.** Good for a "find the route" game mode.
+- **The layout anchor doesn't matter.** `positionsNormalized` (`Map.tsx:139`) subtracts
+  `minX`/`minY`. It stops being harmless the moment invariant 1 breaks.
+- **Exactly one path between any two nodes** of a map.
 - **"Make room" is well-defined** — see Parked.
-- If you ever add "link two existing nodes", this invariant dies and takes the points above
-  with it.
+- "Link two existing nodes" would kill this.
 
 ### 3. Links are symmetric.
 
-The `addNode` case (`nodesReducer.ts:69-93`) writes both sides. `calculateAllPositions`
-positions a child via its back-link, so a one-sided link means the child never gets
-positioned (→ invariant 1). A link to a **nonexistent** id is worse: `positions[danglingId]`
-is `undefined`, `undefined?.x !== null` is `true`, and the walk throws a TypeError. Nothing
-creates one today. **A migration, a hand-edited save, or a server that accepts a malformed
-`addNode` is how you'd get one.**
+`addNode` (`nodesReducer.ts:76-99`) writes both sides. A one-sided link leaves the child
+unpositioned; a link to a **nonexistent** id makes the walk throw (`positions[danglingId]` is
+`undefined`, `undefined?.x !== null` is `true`). Nothing creates one today. **A migration, a
+hand-edited save, or a server that accepts a malformed `addNode` is how you'd get one.** In a
+database, a `links` table (one row per link) makes this invariant disappear — see "Before the
+backend".
 
 ### 4. The action log must stay replayable.
 
-`storageHistory.ts` keeps `{schema, base, log}` and rebuilds state on load with
-`log.reduce(nodesReducer, base)` (`storageHistory.ts:49`). For that to give back the map you
-had, four things must all hold:
+`log.reduce(nodesReducer, base)` (`storageHistory.ts:49`) has to give back the map you had:
 
 - **The reducer stays pure and deterministic.** No `Date.now()`, no id generation, no
-  `localStorage`. StrictMode double-invokes it, so impurity shows up as doubled effects.
-- **Ids are minted by the caller, never by the reducer.** `onAddNodeClick` (`App.tsx:59`)
-  calls `createNode()` and puts the whole node in the payload. If the reducer generated ids,
-  every replay would produce different ones. This is the single most important line to not
-  "tidy up" — and with a backend it becomes a feature, see below.
+  `localStorage`. Reading values *out of `state`* is fine — that's deterministic.
+- **Ids are minted by the caller, never by the reducer.** `onAddNodeClick` (`App.tsx:100`)
+  and `onZoomClick` (`App.tsx:135`) call `createNode()` and put the whole node in the payload.
 - **Actions describe the change, not the result.** `edit` carries `{id, changes}`, `addNode`
-  carries `targetNodeId`, `addWords` (`nodesReducer.ts:94`) carries only the new words. An
-  action carrying a whole captured node would write a stale copy back on replay.
-- **`set` is never logged.** It pairs with `resetHistoryTo`, which writes a new base and
-  empties the log (`DebugPanel.tsx:66`, `:77`). Everything else goes through the logging
-  `dispatch` wrapper (`App.tsx:40`).
+  carries `targetNodeId`, `addWords` (`nodesReducer.ts:121`) only the new words.
+- **`set` is never logged.** It pairs with `resetHistoryTo` (`DebugPanel.tsx:67`, `:79`).
+  Everything else goes through the logging `dispatch` wrapper (`App.tsx:81`).
+- **New, and worth knowing for the server: rejected actions are still logged.** `dispatch`
+  calls `saveAction` *before* the reducer runs, so an action the reducer refuses (e.g. an
+  `addRootNode` into a non-empty map) stays in the log forever. Replay refuses it again
+  identically, so it's harmless junk locally. A server should do it the other way round:
+  validate, then store.
 
 Verified 2026-09-14: a six-action session replays byte-identically to the live state.
 
-**Training grades are not in this log** — `TrainView` writes `wordStrength` directly. "Clear
-history" resets the map only; "Reset training data" is the separate button.
+**Training grades are not in this log** — T6. "Clear history" resets the map only.
 
-**A shape change already happened without `schema` moving** (2026-09-26, the stored `level`
-removal). `isHistory` (`storageHistory.ts:8`) only checks `schema === 1`, so old saves load
-with a stray `level`. Harmless, and proof the guard won't catch the next one.
+**Shape changes keep happening without `schema` moving.** Twice now: the stored `level`
+removal (2026-09-26), and `parentId`/`innerNodeIds` → `outerNodeId` (2026-10-15). Old saves
+still load — a node with no `outerNodeId` is `!outerNodeId`, so it lands on the top level,
+which is correct — but only by luck of the defaults. T3's migration item.
+
+### 5. Links never cross between maps. (New, 2026-10-15)
+
+Both ends of every link have the same `outerNodeId`. If one didn't, the walk for either map
+couldn't find the other end in its filtered list, so the node gets no position and vanishes
+from *both* maps — invariant 1's failure, reached from outside.
+
+It holds because: `[+]` only renders on nodes of the map on screen, and `onAddNodeClick` gives
+the new node the *on-screen* map, `createNode(nodeZoomed?.id)` (`App.tsx:100`). Correct, but
+it's a UI fact. Taking it from the node you branched from instead — the reducer copying
+`targetNode.outerNodeId` onto the new node in `addNode` — would make it structural, and it's
+the check a server needs anyway.
+
+---
+
+## Inner maps — the MVP and what it decided (2026-10-15)
+
+**The model.** One flat `nodes` array. `MapNode.outerNodeId` (`data.ts:56`) is `null` for the
+top level, or the id of the node whose inner map this node lives in. A map is
+`nodes.filter(n => n.outerNodeId === id)` (`App.tsx:74`). In SQL that's an adjacency list: one
+`nodes` table, a nullable FK, `WHERE outer_node_id = ?`. **Verdict: the flat array works and
+is the right shape for the DB.** `calculateAllPositions`, the reducer and replay needed no
+changes — each map is just a smaller input.
+
+**Decided:**
+- **`innerNodeIds` is gone.** It was the reverse of `outerNodeId`, stored twice and with
+  nothing keeping the two in step — the same reason stored `level` was deleted. Children are
+  derived.
+- **`parentId` → `outerNodeId`.** "Parent" already means "the node you branched from" in the
+  link graph (`Map.tsx:62` still has a local `parentId` in that sense, and that's correct).
+- **Exactly one inner level.** Enforced in the reducer (`addRootNode` refuses an outer node
+  that is itself inner) and in the UI (an inner node only gets a zoom-*out* button,
+  `WordList.tsx:32-37`, which goes straight to the top level).
+- **The first node of an inner map is created on zoom-in** (option B). `addRootNode`
+  (`nodesReducer.ts:101`) is its own action because `addNode` needs a link target. The reducer
+  refuses if the outer node doesn't exist, if it's itself an inner node, or if the inner map
+  already has nodes — so "one connected tree per map" holds by construction, not by the
+  caller checking first. The map id lives in one place, `payload.node.outerNodeId`.
+- **Zoom is state, not data.** `nodeZoomedId` (`App.tsx:65`) is an id; `nodeZoomed` is looked
+  up from `nodes`, the same pattern as `nodeInFocus`. `<Map key={nodeZoomedId ?? 'root'}>`
+  (`App.tsx:172`) gives each map fresh scroll and focus state. Both `DebugPanel` resets also
+  reset the zoom (`DebugPanel.tsx:70`, `:82`).
+
+**Open:**
+- [ ] **What deleting a container does to its inner map.** Deferred to T4 "delete a node",
+      deliberately. Can't happen today (only untitled nodes can be deleted, and those never
+      have words, so can never be zoomed into). In SQL it's `ON DELETE CASCADE` vs
+      `RESTRICT`; the leaf-only rule probably extends to "and no inner map".
+- [ ] **Option B's cost: placeholders that stay forever.** Zoom in and straight back out, and
+      the untitled root stays — undeletable, because it's the only node of its map. Fine for
+      an experiment. If inner maps stay, the cleaner version is an *empty state*: zoom is pure
+      navigation, an empty inner map renders a "create the first place" button, and an empty
+      inner map becomes valid, so cancel could delete its only node
+      (`nodesToDisplay.length > 1 || !!nodeZoomed`). Same `addRootNode`; only the trigger
+      changes. It would also turn T2.6's empty-map `-Infinity` into a designed state.
+- [ ] **Auto-opening the side menu on the new root felt wrong** — tried and reverted. A guess
+      at why: zooming in is *looking*. Opening a naming prompt over the map you just
+      navigated into (full-screen on mobile) turns a side effect you didn't ask for into a
+      demand — whereas `[+]` opening `NewTitle` is fine because there you did ask to create
+      something. If that's it, it's another point for the empty-state version above.
+- [ ] **The demo has one inner node** (`cabin` in `forest`), unlinked. Linked inner layouts
+      have only been tested by playing. Worth a few linked inner nodes in `nodesDemo.ts`.
+- [ ] **Small.** `isZoomed={!!nodeZoomedId}` (`Map.tsx:254`) uses the id rather than the
+      looked-up node; harmless now that both resets clear it. `MapHeader` / `MapTitle` /
+      `LeftColumn` are styled components exported from `App.tsx:31-54` — the only file
+      mixing styles and wiring. Typo "non-emty" in the `addRootNode` error message.
+- [ ] **Not decided, on purpose:** whether the outer map shows anything about a node's inner
+      map (that's what `innerNodeIds` was being kept for). If it comes back, derive it.
 
 ---
 
 ## Before the backend — what the current code has already decided
 
-Added 2026-10-13. Not a plan, and not tasks: facts about the existing code that will shape
-whatever server you build, so you meet them on purpose rather than by surprise.
+Not a plan, and not tasks: facts about the existing code that will shape whatever server you
+build, so you meet them on purpose rather than by surprise.
 
-- **The action log is a ready-made sync protocol.** State is already "a base plus an
-  append-only list of deltas". The simplest server that fits is one that *stores actions*:
-  the client POSTs each action it already logs in `saveAction`, the server appends it, and
-  loading is the same `reduce` on either side. That's event sourcing, which is what you built,
-  just with the log living somewhere else. The alternative — a server that stores nodes and
-  exposes CRUD endpoints — is more conventional and also fine; it just means the log becomes a
-  local-only detail. Worth choosing consciously; it's the biggest decision.
-- **Client-minted ids are the right shape for that.** Because `createId()` runs in the client
-  and the id travels in the action, a retried POST can be made idempotent (the server has
-  already seen that node id), and the client never has to wait for the server to tell it what
-  a new node is called. Don't move id generation to the server.
-- **The reducer is the business logic, and it's pure.** `nodesReducer.ts` imports only types,
-  `LinkDirections`, `WordGroups` and `typedKeys` — no React, no browser APIs. A Node backend
-  could import the same file to validate or replay. That's the case for TypeScript on the
-  server, if you want one.
-- **A server must not trust the client's actions.** Today the only guard on an action is
-  "the UI didn't offer the button". `isHistory` checks the envelope, not the contents (T3).
-  The invariants above are exactly the list of things a server would need to check: `addNode`
-  targets an existing node and a free direction (1, 3), `delete` only removes a leaf (1), the
-  gate allows the branch (needs the gate logic out of `Map.tsx` — T2.9). Without that, a bad
-  request can produce the dangling-link crash from invariant 3 for everyone who loads the map.
-- **`set` doesn't fit a log-on-the-server model.** It replaces everything; on a server it's a
-  "reset" endpoint, not an action. Same for `resetHistoryTo`.
-- **`schema` starts to matter for real.** Once data lives on a server you can't "Clear
-  history" your way out of a shape change. The T3 migration item stops being optional.
-- **`wordStrength` is a different kind of data.** It's a snapshot keyed by word *text*,
-  rewritten whole on every grade (T6). Syncing it as-is means last-write-wins on the whole
-  object — two devices would overwrite each other's grades. Storing individual grade events
-  (`{key, value, at}`) would fit the same append-only model as the map, and fixes the
-  `lastCheck` type issue on the way.
-- **Users don't exist yet.** Everything assumes one map and one person. Auth, and "whose map
-  is this", is the first thing any backend tutorial will make you add — it's also the part
-  that changes the data model (one log per user, at minimum).
-- **`DebugPanel` reaches straight into storage** (T2.12). With a backend, its buttons become
-  calls to the server or go away; it's the first thing that will feel wrong.
+- **The action log is a ready-made sync protocol.** State is "a base plus an append-only list
+  of deltas". The simplest server that fits *stores actions*: the client POSTs what
+  `saveAction` already logs, loading is the same `reduce` on either side. The alternative — a
+  server storing nodes behind CRUD endpoints — is more conventional and also fine; then the
+  log becomes a local-only detail. **The biggest decision; choose it consciously.**
+- **The tables, as far as the code has decided them:** `nodes` (id, title, `outer_node_id`
+  nullable FK to `nodes`), words (per node, per group, three translations, optional
+  examples), links. Inner maps settled that it's one `nodes` table, not one per level.
+  **Links are worth their own table** (`from_id`, `to_id`, `direction`): `linkIds` stores
+  every link twice and invariant 3 exists only to keep the copies agreeing. The trade-off is
+  rebuilding `linkIds` on load, or teaching the walk to read edges.
+- **Client-minted ids are the right shape.** A retried POST can be made idempotent (the server
+  already has that node id), and the client never waits for the server to name a node.
+- **The reducer is the business logic, and it's pure.** `nodesReducer.ts` imports only from
+  `data.ts` and `helpers.ts` — no React, no browser APIs. A TypeScript backend could import it
+  to validate or replay.
+- **A server must not trust the client's actions, and must validate *before* storing** (today
+  the log stores first — invariant 4). The invariants are the checklist: `addNode` targets an
+  existing node with a free direction and a title (1, 3), stays inside its map (5);
+  `addRootNode` only into an empty map one level deep (already in the reducer); `delete` only
+  a leaf (1); the gate allows the branch (needs it out of `Map.tsx` — T2.9).
+- **`set` doesn't fit a log-on-the-server model.** It's a "reset" endpoint, not an action.
+- **`schema` starts to matter for real.** Two shape changes have already slipped through
+  without it. On a server you can't "Clear history" out of the third.
+- **`wordStrength` is a different kind of data.** A snapshot keyed by word *text*, rewritten
+  whole on every grade (T6). Synced as-is it's last-write-wins on the whole object. Grade
+  events (`{key, value, at}`) would fit the same append-only model, and fix `lastCheck`.
+- **Users don't exist yet.** Everything assumes one map and one person. Auth, and "whose map is
+  this", is the first thing any backend tutorial will make you add, and it's what changes the
+  data model (one log per user, at minimum).
+- **`DebugPanel` reaches straight into storage** (T2.12). With a backend its buttons become
+  server calls or go away.
 
 ---
 
@@ -207,12 +261,12 @@ whatever server you build, so you meet them on purpose rather than by surprise.
 fixed, Prettier + format-on-save + `.git-blame-ignore-revs` (`0c804fe`).
 
 **T1 — lint sweep** ✅ 2026-09-07, 16 problems → 0. Includes the `setState`-in-`useEffect`
-fix via `key={nodeInFocus.id}` on `<SideMenu>` (`App.tsx:109`).
+fix via `key={nodeInFocus.id}` on `<SideMenu>`.
 
 **T3 — persistence** ✅ 2026-09-14 — `nodesHistory` = `{schema: 1, base, log}`, replayed on
 load. Replay over an inverse-action undo stack because the reducer is already pure.
-Discriminated `NodeAction` union with an exhaustive `never` default (`nodesReducer.ts:40`).
-Lazy `useReducer` init (`App.tsx:30`). Logging in a `dispatch` wrapper (`App.tsx:40`), not a
+Discriminated `NodeAction` union with an exhaustive `never` default (`nodesReducer.ts:41`).
+Lazy `useReducer` init (`App.tsx:59`). Logging in a `dispatch` wrapper (`App.tsx:81`), not a
 `useEffect`. `isHistory` guard + `nodesHistory:corrupt` backup. ~155 bytes per action vs
 ~21 KB per snapshot.
 
@@ -230,110 +284,92 @@ never rejects** — failures sit in the results array; nothing reaches `catch`.
 per-pair history; PROGRESS shows the last five as dots.
 
 **T2.2 + T2.3 — branch gate back on, hint correct** ✅ 2026-10-06 (`b973ec3`). The `+ 1`
-stops the incoming link counting. The hint (`Map.tsx:325`) only shows on a blocked click, where
+stops the incoming link counting. The hint (`Map.tsx:346`) only shows on a blocked click, where
 `3 × linksAmount` is exactly the unblocking level. Words per level went 5/2/2 → 2/1/1.
 
-**T2.12 (half) — demo data moved** ✅ 2026-10-06 — `nodesDemo.ts`, and `data.ts` 754 → 65.
+**T2.12 (half) — demo data moved** ✅ 2026-10-06 — `nodesDemo.ts`, and `data.ts` 754 → 64.
 
-**Mobile v1** ✅ 2026-10-13 — below `md` (900px):
-- `MenuZone` goes full-screen (`SideMenu/styles.ts:170-175`), `ModePanel` becomes a fixed
-  bottom bar (`:190-205`), a back-to-map button appears (`SideMenu.tsx:160`), every `[+]` on
-  the map is always visible (`Map/styles.ts:106-109`), sticky language and group headers.
+**Mobile v1** ✅ 2026-10-13 (`257c71a`) — below `md` (900px):
+- `MenuZone` goes full-screen, `ModePanel` becomes a fixed bottom bar, a back-to-map button
+  appears (`SideMenu.tsx:157-158`), every `[+]` on the map is visible, sticky headers.
 - **Two columns instead of three.** `sideLanguage` is the only stored state
-  (`SideMenu.tsx:52`); `languagesVisible` is *derived* from it plus `useMediaQuery`, so
-  rotating or resizing can't leave it stale — the same "store the choice, derive the rest"
-  move as the three architectural bets. The toggle (`SideMenu.tsx:81`) is `undefined` on
-  desktop, which is what hides it.
-- **Columns are flex, not percentages.** `FlexLine` (`:30`) holds the `gap`, `WordCell` (`:87`)
-  is `flex: 1` + `minWidth: 0` + `overflowWrap: 'anywhere'` + a filtered `hidden` prop. A
-  hidden cell drops out of the flex calculation, so 3 columns → 2 needs no override. That
-  removed every `!important` and every `nth-child` rule. 3/4/3 became 1/1/1 on purpose — the
-  wider centre only ever existed to absorb padding.
-- `100vh` → `100dvh` (`App.tsx:18`, `MenuZone`, `MapZone`), so iOS's address bar doesn't
-  eat the bottom.
-- **`index.css`'s Vite light-mode block is gone**, and `:root` is now
-  `color-scheme: dark; color: #fff; background: #361c2e`. Before, a phone in light mode
-  turned every un-coloured text (node titles, the English column) navy on purple, and every
-  button got a light-grey background.
-- Keys fixed along the way: `<Fragment key={node.id}>` in `Map.tsx:275`, `WordGroup` keyed
-  in all four views, `WordCell` keyed, `ProgressView`'s tabs and dots keyed.
+  (`SideMenu.tsx:54`); `languagesVisible` is derived from it plus `useMediaQuery`. The toggle
+  (`SideMenu.tsx:79`) is `undefined` on desktop, which is what hides it.
+- **Columns are flex, not percentages.** `FlexLine` (`SideMenu/styles.ts:39`) holds the `gap`,
+  `WordCell` (`:96`) is `flex: 1` + `minWidth: 0` + `overflowWrap: 'anywhere'` + a filtered
+  `hidden` prop. Removed every `!important` and `nth-child` rule. 3/4/3 became 1/1/1 on
+  purpose.
+- `100vh` → `100dvh`. `index.css`'s Vite light-mode block gone; `:root` is
+  `color-scheme: dark; color: #fff; background: #361c2e`.
+- Keys fixed: `<Fragment key={node.id}>` (`Map.tsx:296`), `WordGroup`, `WordCell`, and
+  `ProgressView`'s tabs and dots.
+
+**Inner maps MVP** ✅ 2026-10-15 — see the "Inner maps" section.
 
 Still open from T0:
-- [ ] **Rewrite `README.md`** `20min` — still the Vite template. Doubly worth it now: a
-      fullstack portfolio project gets read by other people.
+- [ ] **Rewrite `README.md`** `20min` — still the Vite template. A fullstack portfolio project
+      gets read by other people.
 - [ ] **Favicon** `5min` — `index.html:7` is still `/vite.svg`.
 
 ---
 
 ## Mobile v1 — known leftovers
 
-Added 2026-10-13. Accepted on purpose to wrap mobile up; none of these blocks using it. If a
-proper mobile design ever happens (one card per word, say), that's the case for a separate
-component picked with `useMediaQuery` — the language choice already lives in `SideMenu`, so
-both versions can share it.
+Accepted on purpose to wrap mobile up; none of these blocks using it. A real mobile design
+(one card per word, say) is the case for a separate component picked with `useMediaQuery`.
 
-- [ ] **Save can stay disabled with no visible reason.** `20min`
-      `isWordComplete` needs all three translations (`WordAdd.tsx:38-39`, used by
-      `allFilled`/`anyFilled` at `:191`, `:195`), but on mobile one column is hidden. Type
-      English + French and Save stays greyed out because of the Swedish field you can't see.
-      AUTO hides it when it works. Cheapest fix: mark the toggle when the hidden column has
-      empty fields (`Swedish* >`).
+- [ ] **Save can stay disabled with no visible reason.** `20min` — `isWordComplete` needs all
+      three translations (`WordAdd.tsx:38`, via `allFilled`/`anyFilled` at `:191`, `:195`), but
+      one column is hidden. Mark the toggle when the hidden column has empty fields.
 - [ ] **`BackToMapButton` scrolls away.** `5min` — `position: absolute` inside the scroll
-      container (`SideMenu/styles.ts:371`). `position: fixed`, or move it into the bottom
-      bar. It also closes `WordAdd` without the "You sure?" step its own `x` has.
-- [ ] **Sticky offsets depend on each other.** `5min` — `WordGroupHeader`'s `top: '60px'`
-      (`SideMenu/styles.ts:79`) is the language header's height, and the header's
-      `top: '-8px'` (`:46`) cancels `MenuZone`'s top padding. If the header ever wraps at
-      ~400px, the group headers overlap it. A shared constant or CSS variable.
-- [ ] **`DebugPanel` is hidden by width, not by dev mode** (`DebugPanel.tsx:38`, `:51`). So no
-      "Use demo" on the phone, and it still ships to production on desktop. T2.12.
-- [ ] **`NodeAddButton`'s own mobile `visibility` rule is dead** (`Map/styles.ts:160`) —
-      `NodeRoot`'s `& > button` (`:106-109`) is more specific and does the work. Delete one.
-- [ ] **Small.** `languageColors` (`SideMenu/styles.ts:11`) now has all three languages but is
-      still typed `Partial` — make it `Record<Language, string>`. Header toggle buttons
-      (`LanguageHeader.tsx:40`, `:65`) render as clickable-looking buttons on desktop with no
-      handler. `[EDIT]` is hidden below `sm` (`SideMenu.tsx:112-114`) — fine while it's dead.
+      container (`SideMenu/styles.ts:380`). `fixed`, or into the bottom bar. Also skips
+      `WordAdd`'s "You sure?".
+- [ ] **Sticky offsets depend on each other.** `5min` — `top: '60px'` (`SideMenu/styles.ts:88`)
+      is the language header's height; `top: '-8px'` (`:55`) cancels `MenuZone`'s padding.
+- [ ] **`DebugPanel` is hidden by width, not dev mode** (`DebugPanel.tsx:52`). T2.12.
+- [ ] **`NodeAddButton`'s mobile `visibility` rule is dead** (`Map/styles.ts:165`) —
+      `NodeRoot`'s `& > button` (`:111-114`) wins.
+- [ ] **Small.** `languageColors` (`SideMenu/styles.ts:11`) is still typed `Partial`. Header
+      toggle buttons are clickable-looking on desktop with no handler. `[EDIT]` hidden below
+      `sm` (`SideMenu.tsx:111`). `TextButton`'s `hideOnDesktop` (`SideMenu/styles.ts:23-34`)
+      is the inverse case — used for the zoom-out button, since desktop has one in the map
+      header.
 
 ---
 
 ## T2 — Real bugs (in rough order of how much they'll bite)
 
 - [x] **1, 2, 3, 7, 13** ✅ — see Done log.
-- [ ] **4. React keys — mostly fixed, two things left.** `5min`
-      - The `[✔]/[~]/[x]` buttons (`TrainView.tsx:161`) are still unkeyed.
+- [ ] **4. React keys — two things left.** `5min`
+      - The `[✔]/[~]/[x]` buttons (`TrainView.tsx:161`) are unkeyed.
       - **The real one:** rows are keyed on three translations concatenated
-        (`WordList.tsx:63`, `TrainView.tsx:130`, `ProgressView.tsx:74`), and `addWords`
-        appends without dedup, so the same word twice gives two rows with one key. Your
-        uniqueness TODO at the top of this file, seen from the render side.
-        `${group}_${index}` is the honest key — `WordAdd.tsx:233` already does it.
-      - (`key={group}` on each `WordGroupHeader` does nothing — it isn't what the `.map()`
-        returns. Harmless.)
+        (`WordList.tsx:63`, `TrainView.tsx:130`, `ProgressView.tsx:73`), and `addWords`
+        appends without dedup — your uniqueness TODO from the render side. `${group}_${index}`
+        is the honest key; `WordAdd.tsx:233` already does it.
       **Lint will never catch these** — `eslint-plugin-react` isn't installed.
 - [ ] **5. The layout anchor is implicit.** `20min` — `calculateAllPositions(nodes, nodes[0])`
-      (`Map.tsx:116`). No visible symptom (invariant 2). Store a `rootId` or comment why
-      `nodes[0]` is safe. Not `parentId` — it's `null` everywhere.
+      (`Map.tsx:124`). Per map now, and for inner maps it happens to be the `addRootNode` node.
+      Store a root id per map, or comment why `nodes[0]` is safe.
 - [ ] **6. Unreachable nodes vanish, and empty-map math produces garbage.** `20min`
-      Bare `return` at `Map.tsx:247`. `Math.min(...[])` is `Infinity` (`:120`, `:125`),
-      `Math.max(...[])` is `-Infinity` (`mapWidth` `:180`, `mapHeight` `:189`, `maxLevel`
-      `:145`). Guard both directions.
+      Bare `return` at `Map.tsx:259`. `Math.min(...[])` is `Infinity` (`:128`, `:133`),
+      `Math.max(...[])` is `-Infinity` (`mapWidth` `:188`, `mapHeight` `:197`, `maxLevel`
+      `:153`). Unreachable today — `addRootNode` on zoom means no map renders empty — but the
+      empty-state version of inner maps would make empty maps a real state.
 - [ ] **8. `oppositeDirections` is copy-pasted.** `5min` — `nodesReducer.ts:11`, `Map.tsx:28`.
-      Move next to `LinkDirections` in `data.ts`.
-- [ ] **9. Game rules are scattered.** `20min` — **and the backend makes this one matter.**
-      `LEVELS_REQUIRED_PER_LINK` lives in `Map.tsx:26` and the gate formula is inline in a
-      click handler (`Map.tsx:166-169`), next to the hint (`:325`), while
-      `REQUIRED_WORDS_PER_LEVEL` and `getNodeLevel` are in `helpers.ts:38`, `:44`. A
-      `rules.ts` with both constants, `getNodeLevel` and a `canBranch(node)` /
-      `nextBranchLevel(node)` pair is what a server would import to validate an `addNode`.
-- [ ] **10. Palette lives in the side menu's styles.** `5min` — `SideMenu/styles.ts:4-15`,
-      imported by `Map/styles.ts` and `App.tsx`. A `theme/colours.ts` is a pure move.
-      `Theme.ts:53` still hardcodes `color: 'white'` on `MuiInputBase`.
+- [ ] **9. Game rules are scattered.** `20min` — **the backend makes this one matter.**
+      `LEVELS_REQUIRED_PER_LINK` (`Map.tsx:26`) and the gate formula inline in a click handler
+      (`Map.tsx:175-177`), next to the hint (`:346`) and the new "must have a title" check
+      (`:263`); `REQUIRED_WORDS_PER_LEVEL` and `getNodeLevel` in `helpers.ts:37`, `:43`. A
+      `rules.ts` with `canBranch(node)` / `nextBranchLevel(node)` is what a server imports to
+      validate an `addNode`.
+- [ ] **10. Palette lives in the side menu's styles.** `5min` — `SideMenu/styles.ts:4-15`.
+      `Theme.ts:53` still hardcodes `color: 'white'`.
 - [ ] **11. `direction` leaks to the DOM.** `5min` — `NodeAddButton` filters `"position"`
-      (`Map/styles.ts:129`) but the prop is `direction` (`Map.tsx:337`).
-- [ ] **12. `DebugPanel` ships to users.** `5min` — the demo-data half is done. Left: gate it
-      behind `import.meta.env.DEV` instead of the width check (`DebugPanel.tsx:51`), which
-      also drops `nodesDemo.ts` out of the 423 KB bundle. And it pairs `resetHistoryTo` with
-      a raw `dispatchNodes`, correct **only** because `App.tsx:96` passes the non-logging
-      dispatch — a `loadNodes(nodes)` in `storageHistory.ts` would make that unrepresentable.
+      (`Map/styles.ts:134`) but the prop is `direction` (`Map.tsx:358`).
+- [ ] **12. `DebugPanel` ships to users.** `5min` — gate it behind `import.meta.env.DEV`
+      instead of the width check (`DebugPanel.tsx:52`); drops `nodesDemo.ts` out of the
+      427 KB bundle. And it pairs `resetHistoryTo` with a raw `dispatchNodes`, correct only
+      because `App.tsx:151` passes the non-logging dispatch.
 
 ---
 
@@ -341,55 +377,43 @@ both versions can share it.
 
 All refs in `storageHistory.ts`. Several of these change shape once there's a server.
 
-- [ ] **`getInitialState` can return `[]`.** `5min` — empty base + empty log → `Map` computes
-      `mapWidth = -Infinity`. Not reachable through the UI. Ties into T2.6.
-- [ ] **`isHistory` validates the envelope, not the contents.** `20min`, or decide not to.
-      Fine for local storage. **Not fine for a server** — see "Before the backend".
+- [ ] **`getInitialState` can return `[]`.** `5min` — empty base + empty log. Ties into T2.6.
+- [ ] **`isHistory` validates the envelope, not the contents.** Fine locally, not for a server.
 - [ ] **`saveAction` can silently desync from disk.** `20min` — pushes, *then* writes
-      (`:35-36`). If `setItem` throws, memory and disk disagree forever. The same shape of
-      problem as "the POST failed" once there's a server, so worth solving once with that in
-      mind.
+      (`:35-36`). Same shape of problem as "the POST failed".
 - [ ] **Nothing bounds the log.** `deep`, parked. 0.3 MB / 0.7 ms at 1,000 actions, 2.9 MB /
-      7.1 ms at 10,000, all main-thread. Compaction when it matters — on a server too.
-- [ ] **`schema: 1` is checked but nothing migrates.** `20min` — becomes mandatory with a
-      backend.
-- [ ] **State shape.** `deep`, optional — `Record<string, MapNode>` + `rootId`. Readability,
-      not correctness. If you do it, do it before the server, while there's only one copy of
-      the data to migrate.
+      7.1 ms at 10,000. Compaction when it matters.
+- [ ] **`schema: 1` is checked but nothing migrates.** `20min` — two silent shape changes so
+      far (invariant 4). Mandatory with a backend.
+- [ ] **State shape.** `deep`, optional — `Record<string, MapNode>` instead of an array.
+      Readability, not correctness. If ever, before the server.
 
 ---
 
 ## T4 — Unfinished flows (smallest first)
 
-- [x] **Level up**, **TRAIN v1** ✅ — see Done log.
-- [ ] **Decide where example sentences go.** `20min` / `1h` — `examples` exists, `WordList`
-      and `TrainView` render them, only `WordAdd` has no inputs.
-- [ ] **EDIT flow** `1h` — `[EDIT]` is `disabled={true}` (`SideMenu.tsx:113`); `edit` is
-      already in `SideMenuMode` (`data.ts:6`). Training records are keyed by word text (T6),
-      so editing a word orphans its history — accept that, or move the record in the same
-      handler.
-- [ ] **Delete a node** `1h` — **where invariant 1 gets decided.** Leaf-only (≤1 non-null
-      `linkIds`), written once, used in both delete paths, same commit as the UI.
-      `unlinkTargetNode` (`nodesReducer.ts:18`) does the hard part. Needs a confirm step —
-      `WordAdd`'s `x` → "You sure?" (`:268-273`) is the pattern. Decide whether deleting a
-      node deletes its words' training records (probably not).
-- [ ] **PROGRESS "errors" / "time"** — disabled tabs (`ProgressView.tsx:40`). Fix T6's
-      `lastCheck` type first.
+- [x] **Level up**, **TRAIN v1**, **inner maps MVP** ✅ — see Done log.
+- [ ] **Decide where example sentences go.** `20min` / `1h` — only `WordAdd` has no inputs.
+- [ ] **EDIT flow** `1h` — `[EDIT]` is `disabled={true}` (`SideMenu.tsx:111`); `edit` is in
+      `SideMenuMode` (`data.ts:6`). Editing a word's text orphans its training history (T6).
+- [ ] **Delete a node** `1h` — **where invariant 1 gets decided, and now also what happens to a
+      node's inner map.** Leaf-only, written once, same commit as the UI. `unlinkTargetNode`
+      (`nodesReducer.ts:18`) does the hard part. Confirm step: `WordAdd`'s "You sure?"
+      (`:269`) is the pattern. Training records probably stay.
+- [ ] **PROGRESS "errors" / "time"** — disabled tabs (`ProgressView.tsx:39`). Fix T6's
+      `lastCheck` first.
 - [ ] **Zoomable map** `deep` — `transform: scale()` + wheel/pinch; `scrollToNode`
-      (`Map.tsx:198`) needs the scale.
-- [ ] **Search: find a node by a word in it** `1h` — filter on `words[*].translations[*]`,
-      reuse `scrollToNode` + focus. Also a natural first *server* query, if you want one.
+      (`Map.tsx:206`) needs the scale. Not to be confused with inner-map "zoom", which is
+      navigation.
+- [ ] **Search: find a node by a word in it** `1h` — now has to search across maps and
+      zoom to the right one first. A natural first server query.
 - [ ] **Make the language list configurable** `1h` — the triple is one declaration
-      (`data.ts:61`). Left: `languageCode` (`WordAdd.tsx:41`) and `languageColors`
-      (`SideMenu/styles.ts:11`) are two more tables keyed by language. One per-language
-      config next to the triple. The annotation on `emptyTranslations` (`WordAdd.tsx:26`) is
-      load-bearing — annotate, don't assert. The `as` casts (`WordAdd.tsx:93`, `:101`, `:132`,
-      `:174`; `TrainView.tsx:62`) are the only thing giving `Object.fromEntries` its shape.
-- [ ] **AI word / category suggestions** `deep` — a good excuse for a server endpoint later:
-      the API key can't live in the client.
-- [ ] **Inner nodes** `deep` — `innerNodeIds` unused; each inner map is its own connected
-      scope. ZOOM placeholders in `WordList.tsx:37`, `WordAdd.tsx:213`; `onZoomClick` is an
-      empty `// WIP` (`SideMenu.tsx:66`).
+      (`data.ts:60`). Left: `languageCode` (`WordAdd.tsx:41`) and `languageColors`
+      (`SideMenu/styles.ts:11`). The annotation on `emptyTranslations` (`WordAdd.tsx:26`) is
+      load-bearing. The `as` casts (`WordAdd.tsx:93`, `:101`, `:132`, `:174`;
+      `TrainView.tsx:62`) are the only thing giving `Object.fromEntries` its shape.
+- [ ] **AI word / category suggestions** `deep` — a good server endpoint later: the API key
+      can't live in the client.
 
 ---
 
@@ -399,78 +423,64 @@ All refs in `storageHistory.ts`. Several of these change shape once there's a se
 first two have teeth.
 
 - [ ] **The async write-back is correct only because the inputs are disabled.** `20min`
-      `setWords(() => wordsUpdated)` (`WordAdd.tsx:175`) ignores `prev`; `wordsUpdated` is
-      built from `words` captured before the `await` (`:143`, `:160`). Can't bite today —
-      the inputs are `disabled={isLoading}` (`:241`), AUTO is disabled while loading
-      (`LanguageHeader.tsx:48`). Merge into `prev` anyway. Save (`:265`) and `x` (`:268`) are
-      not disabled while loading.
+      `setWords(() => wordsUpdated)` (`WordAdd.tsx:175`) ignores `prev`; built from `words`
+      captured before the `await` (`:143`, `:160`). Inputs are `disabled={isLoading}` (`:241`).
+      Save (`:265`) and `x` (`:269`) aren't disabled while loading.
 - [ ] **Two traversals kept in step by a hand-rolled counter.** `20min` — `:143` vs `:160`,
-      `let i = -1` / `++i` (`:158`, `:163`). Keep the `Record` shape through the fetch.
-- [ ] **`translate` returns `any`.** `5min` — `?? ''` at `:57`. Annotate `Promise<string>`.
-- [ ] **A successful empty translation overwrites a typed word.** `5min` — `?? ''` (`:57`)
-      wins the `??` at `:168-169`. Throw instead.
-- [ ] **A total failure locks the retry.** `5min` — `setInputTouched(false)` (`:176`) runs on
-      failure too; `enableAutoTranslation` (`:184`) needs it.
-- [ ] **`isWordComplete` tests for `''` specifically.** `5min` — `:38-39`. `.every((v) => !!v)`.
-- [ ] **MyMemory is still the wrong API.** `deep`. A real dictionary API is the fix — and with
-      a backend, the call (and any key) can move server-side.
+      `let i = -1` / `++i` (`:158`, `:163`).
+- [ ] **`translate` returns `any`.** `5min` — `?? ''` at `:57`.
+- [ ] **A successful empty translation overwrites a typed word.** `5min` — `:57` vs `:168`.
+- [ ] **A total failure locks the retry.** `5min` — `setInputTouched(false)` (`:176`) vs
+      `enableAutoTranslation` (`:184`).
+- [ ] **`isWordComplete` tests for `''` specifically.** `5min` — `:38`.
+- [ ] **MyMemory is still the wrong API.** `deep` — and with a backend, the call can move
+      server-side.
 
 ---
 
 ## T6 — TRAIN / PROGRESS: the second store
 
-**None of this is critical.** Re-read "Before the backend" before syncing this store — it's
-the one that doesn't fit the append-only model.
+**None of this is critical.** Re-read "Before the backend" before syncing this store.
 
-- [x] ~~Key format change orphans old records~~ — committed in `b973ec3`; old test records
-      are dead weight, "Reset training data" clears them.
-- [ ] **Records are keyed by word text** (`getWordKey`, `helpers.ts:66`). Same pair in two
-      nodes shares a record (probably right); editing a word orphans its history (T4 EDIT);
-      the group is part of the key, matching your "allow repeats if different categories"
-      TODO. Pick the same uniqueness rule for adding words and for this key.
+- [ ] **Records are keyed by word text** (`getWordKey`, `helpers.ts:65`). Same pair in two
+      nodes — or in an inner and an outer map — shares a record; editing a word orphans its
+      history; the group is part of the key, matching your uniqueness TODO.
 - [ ] **`lastCheck: Date` is a type lie after a reload.** `5min` — `data.ts:40` vs
-      `TrainView.tsx:103`. `JSON.parse` gives back a string; `lastCheck.getTime()` will throw
-      when "time" reads it. Store `Date.now()` as `number`. Also a JSON-over-HTTP issue, so
-      fix it before it crosses a network.
+      `TrainView.tsx:103`. Store `Date.now()` as `number`. Fix before it crosses a network.
 - [ ] **The per-render read in `TrainView` is load-bearing.** `5min`, a comment —
-      `getWordStrengthList()` at `TrainView.tsx:65` runs every render and that's what keeps it
-      fresh after a save. Wrapping it in `useMemo` like `ProgressView.tsx:29` would make the
-      second grade overwrite the first.
+      `TrainView.tsx:65`. A `useMemo` like `ProgressView.tsx:28` would make the second grade
+      overwrite the first.
 - [ ] **Revealing a second word before grading the first drops the first grade.** `5min` to
-      decide — `onRevealClick` (`TrainView.tsx:71`) replaces `evaluationPending` (`:81`).
-- [ ] **`[TRAIN]` hides at level 0** (`SideMenu.tsx:96`) even with saved words. Deliberate?
+      decide — `TrainView.tsx:71`, `:81`.
+- [ ] **`[TRAIN]` hides at level 0** (`SideMenu.tsx:94`) even with saved words. Deliberate?
 - [ ] **Small:** `saveWordStrengthList` / `setWordStrengthList` are one write under two names
       (`storageStrength.ts:30`, `:34`). `isWordStrengthList` (`:5`) accepts `null`/arrays.
       `TrainView.tsx` exports `TrainMode`. `ProgressMode.time` is `'time,'` (`data.ts:14`).
-      `ProgressView` takes `onZoomClick` and never uses it (`:26`).
 
 ---
 
 ## Game design — open questions worth writing down
 
-- **Geomap or mindmap?** The 4-neighbour grid is a bet on *geomap*. The more you build on it
-  the more the bet is locked in.
-- **Path-finding mode** — route from a start node to a destination as speaking practice.
-  Unique route on a tree (invariant 2).
-- **What does a grade mean over time?** Decay, and eventually maybe spaced repetition, once
-  "time" exists.
-- **Shared maps?** A backend makes "someone else's map" possible for the first time — a
-  teacher's map, a published starter map. Read-only sharing is cheap with a log; collaborative
-  editing of one map is a much bigger problem (two people branching the same node).
+- **Geomap or mindmap?** The 4-neighbour grid is a bet on *geomap*. Inner maps doubled down
+  on it — a Cabin inside the Forest reads geographically.
+- **What are inner maps *for*?** The MVP shows they work technically. Open: does an inner
+  node level the outer one, is an inner map unlocked by level, does it show on the outer map.
+- **Path-finding mode** — route from a start node to a destination. Unique route on a tree.
+- **What does a grade mean over time?** Decay, maybe spaced repetition, once "time" exists.
+- **Shared maps?** A backend makes "someone else's map" possible. Read-only sharing is cheap
+  with a log; collaborative editing is a much bigger problem.
 
 ---
 
 ## Parked on purpose — permission to not think about these
 
-- **Making room / stretchable edges.** `deep`. A solution always exists on a tree; the cost is
-  collision cascading through other branches. Really "incremental grid layout with constraint
-  propagation" — stored coordinates or dropping the grid. Variable-length edges would be a
-  distance per link multiplied into `directionShift` (`Map.tsx:35`).
+- **Making room / stretchable edges.** `deep`. Really "incremental grid layout with constraint
+  propagation". Variable-length edges would be a distance per link in `directionShift`
+  (`Map.tsx:35`).
 - **Dynamic non-grid graph.** Invalidates `calculateAllPositions`, `scrollToNode`, `canExpand*`.
-- **Tests.** None, and fine. If you want one: `calculateAllPositions`, five cases including a
-  disconnected graph. Second candidate: the gate, once it's in `rules.ts`. **A backend
-  changes this calculus** — server endpoints are where tests usually start paying for
-  themselves, and the reducer is pure enough to test from either side.
+- **Tests.** None, and fine. Candidates: `calculateAllPositions`, the gate once it's in
+  `rules.ts`, and now `addRootNode`'s three refusals. **A backend changes this calculus** —
+  server endpoints are where tests usually start paying for themselves.
 - **Accessibility and keyboard nav.** Unlabelled `+` buttons, no Escape to close the menu.
 - **`vite` pinned to `^8.0.0-beta.13`** with an `overrides` entry (`package.json:34-37`).
 
@@ -478,23 +488,20 @@ the one that doesn't fit the append-only model.
 
 ## Suggested next session
 
-**Backend, by choice.** The game doesn't need one; you want a fullstack project to learn on,
-and this is a good one for it because the data model is small and already event-shaped.
+**Backend, by choice.** The inner-maps experiment answered the last data-model question: one
+flat `nodes` table with a nullable `outer_node_id`.
 
-Before writing server code, two decisions that everything else follows from — "Before the
-backend" has the reasoning for both:
+Two decisions first — "Before the backend" has the reasoning:
 1. **Store actions or store nodes?** A log on the server keeps your architecture; a node
-   table is the more conventional CRUD shape. Either is a legitimate learning path.
-2. **What does a server refuse?** Today nothing validates an action. Deciding which invariant
-   checks move server-side tells you what to extract first — almost certainly T2.9's
-   `rules.ts`.
+   table is the conventional CRUD shape. And either way: **links as their own table?**
+2. **What does a server refuse?** The invariants are the list. `addRootNode` already does its
+   checks in the reducer — that's the pattern; T2.9's `rules.ts` is the next piece.
 
-Cheap things worth doing before the first server commit, because they're cheaper while
-there's only one copy of the data:
-- T6 `lastCheck` → `number` (`5min`) — a `Date` doesn't survive JSON either way.
+Cheap things worth doing before the first server commit, while there's one copy of the data:
+- `schema` bump + a migration for the two silent shape changes (T3), or at least decide not to.
+- T6 `lastCheck` → `number` (`5min`).
 - T2.12 `import.meta.env.DEV` on `DebugPanel` (`5min`).
-- T3 state shape, *if* you were ever going to do it.
-- `README.md` — people will look at a fullstack portfolio repo.
+- `README.md`.
 
-In downtime, by appetite: T4 delete a node (the invariant-1 commit), T4 search, the Mobile v1
-leftovers, T2.8 / T2.11 (`5min` each).
+In downtime, by appetite: the inner-maps empty state, T4 delete a node, T4 search (now
+cross-map), Mobile v1 leftovers, T2.8 / T2.11.

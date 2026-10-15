@@ -209,8 +209,8 @@ export const WordAdd: FC<{
   return (
     <>
       <ActionsPanel>
-        <TextButton disabled={true}>
-          {nodeInFocus.parentId ? '<- ZOOM ->' : '+> ZOOM <+'}
+        <TextButton disabled={true} hideOnDesktop={!!nodeInFocus.outerNodeId}>
+          {nodeInFocus.outerNodeId ? '<- ZOOM ->' : '+> ZOOM <+'}
         </TextButton>
       </ActionsPanel>
       <LanguageHeader

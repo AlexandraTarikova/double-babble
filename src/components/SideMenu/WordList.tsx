@@ -20,7 +20,7 @@ export const WordList: FC<{
   nodeInFocus: MapNode;
   languagesVisible: Language[];
   onLanguageClick?: () => void;
-  onZoomClick: () => void;
+  onZoomClick: (id: string | null) => void;
 }> = ({ nodeInFocus, languagesVisible, onLanguageClick, onZoomClick }) => {
   const totalAmount = Object.values(nodeInFocus.words).flat().length;
 
@@ -29,12 +29,12 @@ export const WordList: FC<{
       {totalAmount !== 0 && (
         <ActionsPanel>
           <TextButton
-            disabled={
-              nodeInFocus.innerNodeIds.length === 0 && !nodeInFocus.parentId
+            hideOnDesktop={!!nodeInFocus.outerNodeId}
+            onClick={() =>
+              onZoomClick(nodeInFocus.outerNodeId ? null : nodeInFocus.id)
             }
-            onClick={onZoomClick}
           >
-            {nodeInFocus.parentId ? '<- ZOOM ->' : '+> ZOOM <+'}
+            {nodeInFocus.outerNodeId ? '<- ZOOM ->' : '+> ZOOM <+'}
           </TextButton>
         </ActionsPanel>
       )}

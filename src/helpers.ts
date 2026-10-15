@@ -15,7 +15,7 @@ export function createId(): string {
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 }
 
-export function createNode(): MapNode {
+export function createNode(outerNodeId?: string): MapNode {
   return {
     id: createId(),
     title: '',
@@ -24,8 +24,7 @@ export function createNode(): MapNode {
       verbs: [],
       adjectives: [],
     },
-    parentId: null,
-    innerNodeIds: [],
+    outerNodeId: outerNodeId ?? null,
     linkIds: {
       N: null,
       E: null,

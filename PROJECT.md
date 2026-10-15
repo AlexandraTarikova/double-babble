@@ -45,8 +45,10 @@ that belongs to it. Learning vocabulary is what makes the map grow.
   `[✔]` / `[~]` / `[x]` (1 / 0 / -1). Each grade is appended to that word pair's history.
 - **PROGRESS** shows the last five grades per word pair as a row of dots. Only the "general"
   tab exists; "errors" and "time" are disabled placeholders.
-- `innerNodeIds` is a placeholder for the eventual "zoom into a node's own map" feature.
-  Unused so far.
+- **Inner maps** (MVP): ZOOM into a node to see its own map of places — the Cabin inside the
+  Forest. Strictly one level deep. The first inner node is created automatically on the first
+  zoom-in, as an untitled placeholder. What inner maps are _for_ in the game (levelling,
+  unlocking) is still open.
 
 The rigidity is deliberate: you add words in fixed-size batches, so the game makes you learn
 verbs and adjectives instead of hoarding nouns. Whether that stays is an open design question,
@@ -83,8 +85,15 @@ codebase, and worth knowing before suggesting anything:
    writes stale data back. Ids are minted by the caller (`createId()`), never the reducer, so
    replay is deterministic.
 
-The same instinct shows up in smaller places — e.g. on mobile only the chosen outer language
-is stored; which columns are visible is derived from it plus the screen size.
+The same instinct shows up in smaller places — on mobile only the chosen outer language is
+stored, and which columns are visible is derived from it plus the screen size; inner maps
+store only `outerNodeId` on each node, and a node's inner map is derived by filtering (an
+`innerNodeIds` list was deleted for being the same fact stored twice).
+
+**All maps live in one flat `nodes` array.** `outerNodeId` is `null` for the top level, or the
+id of the node whose inner map this is. `Map` only ever receives one map's nodes, so the
+layout walk, the reducer and replay needed no changes for inner maps. This is the shape
+intended for the DB too: one `nodes` table with a nullable `outer_node_id`.
 
 **The one deliberate exception: training results.** They live in a second key,
 `wordStrength`, as a plain snapshot — `Record<key, {results, lastCheck}>` rewritten whole on
@@ -103,11 +112,14 @@ part that doesn't fit. `TECH_DEBT.md` → "Before the backend" has the detail.
 - `src/helpers.ts` — `createId`, `createNode`, `getNodeLevel`, the levelling constant,
   `getWordKey`. `createId` is a hand-rolled v4 UUID because `crypto.randomUUID()` only exists
   on HTTPS / `localhost`, which breaks testing on a phone over the LAN.
-- `src/nodesReducer.ts` — every state transition: `addNode` / `edit` / `delete` / `set` /
+- `src/nodesReducer.ts` — every state transition: `addNode` / `addRootNode` (first node of an
+  inner map; refuses unless the map is empty and one level deep) / `edit` / `delete` / `set` /
   `addWords`
 - `src/storageHistory.ts` — the event-sourced `nodesHistory` layer
 - `src/storageStrength.ts` — the `wordStrength` training store
-- `src/App.tsx` — wiring; `dispatch` wraps `dispatchNodes` so every action is logged
+- `src/App.tsx` — wiring; `dispatch` wraps `dispatchNodes` so every action is logged. Also
+  owns the zoom (`nodeZoomedId`) and filters `nodes` down to the map on screen
+  (`nodesToDisplay`).
 - `src/components/Map/` — layout, rendering, branch buttons, the branch gate
 - `src/components/SideMenu/` — the node panel. `SideMenu` owns the mode
   (`initial` / `words` / `levelUp` / `train` / `progress`) and the mobile language choice,
@@ -120,9 +132,10 @@ part that doesn't fit. `TECH_DEBT.md` → "Before the backend" has the detail.
 
 ## Invariants
 
-There are four rules the code quietly depends on — the graph stays connected, every node is
-reachable from any anchor, links are symmetric, and the action log stays replayable. They are
-not enforced anywhere, and breaking one causes nodes to silently disappear rather than throw.
+There are five rules the code quietly depends on — every map stays connected, every map is a
+tree, links are symmetric, the action log stays replayable, and links never cross between
+maps. Mostly not enforced anywhere (`addRootNode` is the exception), and breaking one causes
+nodes to silently disappear rather than throw.
 **`TECH_DEBT.md` has them written out with the exact conditions currently holding each one up.
 Read that section before changing delete, branching, the reducer — or anything a server will
 accept from a client.**
@@ -130,16 +143,17 @@ accept from a client.**
 ## Where it is right now
 
 The core loop works end to end: add words → gain a level → the node grows → branch to a new
-place, and it all survives a reload. TRAIN v1 and PROGRESS "general" work on top of it, and
-the UI is usable on tablets and phones (mobile v1, 2026-10-13). `tsc -b`, `prettier` and
-`npm run lint` are clean.
+place, and it all survives a reload. TRAIN v1 and PROGRESS "general" work on top of it, the
+UI is usable on tablets and phones (mobile v1, 2026-10-13), and inner maps work as an MVP
+(2026-10-15). `tsc -b`, `prettier` and `npm run lint` are clean.
 
 Built but unfinished: EDIT, delete-a-titled-node, examples in the add form, PROGRESS
-"errors"/"time", search, zoom, inner maps.
+"errors"/"time", search, map zoom (scaling — not the same thing as inner-map zoom), inner maps
+beyond the MVP (see `TECH_DEBT.md` → "Inner maps").
 
-Next up: **a backend.** Two decisions come first — does the server store actions or nodes,
-and what does it refuse — written up at the bottom of `TECH_DEBT.md`. Features may still
-happen in downtime.
+Next up: **a backend.** The inner-maps experiment settled the table shape; two decisions come
+first — does the server store actions or nodes, and what does it refuse — written up at the
+bottom of `TECH_DEBT.md`. Features may still happen in downtime.
 
 ```
 npm run dev      # vite

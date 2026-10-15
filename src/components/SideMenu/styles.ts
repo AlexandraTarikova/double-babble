@@ -15,17 +15,26 @@ export const languageColors: Partial<Record<Language, string>> = {
 };
 
 export const TextButton = styled('button', {
-  shouldForwardProp: (propName) => propName !== 'active',
-})<{ active?: boolean }>(({ active = false }) => ({
-  color: active ? COLOUR_LIGHT : COLOUR_MUTED,
-  '&:not(:disabled):hover': {
-    color: COLOUR_FOCUS,
-  },
-  '&:disabled': {
-    color: COLOUR_DARK_MUTED,
-    cursor: 'default',
-  },
-}));
+  shouldForwardProp: (propName) =>
+    propName !== 'active' && propName !== 'hideOnDesktop',
+})<{ active?: boolean; hideOnDesktop?: boolean }>(
+  ({ theme, active = false, hideOnDesktop = false }) => ({
+    color: active ? COLOUR_LIGHT : COLOUR_MUTED,
+    visibility: hideOnDesktop ? 'hidden' : undefined,
+    pointerEvents: hideOnDesktop ? 'none' : undefined,
+    '&:not(:disabled):hover': {
+      color: COLOUR_FOCUS,
+    },
+    '&:disabled': {
+      color: COLOUR_DARK_MUTED,
+      cursor: 'default',
+    },
+    [theme.breakpoints.down('md')]: {
+      visibility: hideOnDesktop ? 'visible' : undefined,
+      pointerEvents: hideOnDesktop ? 'auto' : undefined,
+    },
+  }),
+);
 
 export const FlexLine = styled(Box)(({ theme }) => ({
   display: 'flex',

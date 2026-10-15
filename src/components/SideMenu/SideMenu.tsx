@@ -30,6 +30,7 @@ export const SideMenu: FC<{
   onNodeRename: (newName: string) => void;
   onCancelClick: (targetNodeId: string) => void;
   onCloseClick: () => void;
+  onZoomClick: (id: string | null) => void;
   onAddWords: (
     targetNodeId: string,
     words: Record<WordGroupsType, Word[]>,
@@ -37,6 +38,7 @@ export const SideMenu: FC<{
 }> = ({
   nodeInFocus,
   onCloseClick,
+  onZoomClick,
   onNodeRename,
   onCancelClick,
   onAddWords,
@@ -62,10 +64,6 @@ export const SideMenu: FC<{
   };
 
   const level = getNodeLevel(nodeInFocus);
-
-  const onZoomClick = () => {
-    //WIP
-  };
 
   const onResetTrainingClick = () => {
     setTrainingKey((prev) => prev + 1);
@@ -154,7 +152,6 @@ export const SideMenu: FC<{
           nodeInFocus={nodeInFocus}
           languagesVisible={languagesVisible}
           onLanguageClick={onLanguageClick}
-          onZoomClick={onZoomClick}
         />
       )}
       {hasTitle && (

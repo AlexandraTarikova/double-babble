@@ -492,8 +492,7 @@ export const NODES_DEMO: MapNode[] = [
         },
       ],
     },
-    parentId: null,
-    innerNodeIds: [],
+    outerNodeId: null,
     linkIds: {
       N: 'road',
       E: 'village',
@@ -752,8 +751,7 @@ export const NODES_DEMO: MapNode[] = [
         },
       ],
     },
-    parentId: null,
-    innerNodeIds: [],
+    outerNodeId: null,
     linkIds: {
       N: null,
       E: 'forest',
@@ -1252,8 +1250,7 @@ export const NODES_DEMO: MapNode[] = [
         },
       ],
     },
-    parentId: null,
-    innerNodeIds: [],
+    outerNodeId: null,
     linkIds: {
       N: null,
       E: 'river',
@@ -1512,8 +1509,7 @@ export const NODES_DEMO: MapNode[] = [
         },
       ],
     },
-    parentId: null,
-    innerNodeIds: [],
+    outerNodeId: null,
     linkIds: {
       N: null,
       E: null,
@@ -1772,8 +1768,7 @@ export const NODES_DEMO: MapNode[] = [
         },
       ],
     },
-    parentId: null,
-    innerNodeIds: [],
+    outerNodeId: null,
     linkIds: {
       N: 'river',
       E: null,
@@ -2032,8 +2027,7 @@ export const NODES_DEMO: MapNode[] = [
         },
       ],
     },
-    parentId: null,
-    innerNodeIds: [],
+    outerNodeId: null,
     linkIds: {
       N: 'castle',
       E: null,
@@ -2292,12 +2286,174 @@ export const NODES_DEMO: MapNode[] = [
         },
       ],
     },
-    parentId: null,
-    innerNodeIds: [],
+    outerNodeId: null,
     linkIds: {
       N: null,
       E: null,
       S: 'road',
+      W: null,
+    },
+  },
+  {
+    id: 'cabin',
+    title: 'Cabin in the woods',
+    words: {
+      nouns: [
+        {
+          translations: {
+            english: 'a cabin',
+            swedish: 'en stuga',
+            french: 'une cabane',
+          },
+          examples: {
+            english: 'The cabin is in the woods',
+            swedish: 'Stugan ligger i skogen',
+            french: 'La cabane est dans les bois',
+          },
+        },
+        {
+          translations: {
+            english: 'a fireplace',
+            swedish: 'en eldstad',
+            french: 'une cheminée',
+          },
+          examples: {
+            english: 'We sit by the fireplace',
+            swedish: 'Vi sitter vid eldstaden',
+            french: 'Nous sommes assis près de la cheminée',
+          },
+        },
+        {
+          translations: {
+            english: 'a blanket',
+            swedish: 'en filt',
+            french: 'une couverture',
+          },
+          examples: {
+            english: 'I sleep under a blanket',
+            swedish: 'Jag sover under en filt',
+            french: 'Je dors sous une couverture',
+          },
+        },
+        {
+          translations: {
+            english: 'a candle',
+            swedish: 'ett ljus',
+            french: 'une bougie',
+          },
+          examples: {
+            english: 'The candle burns all night',
+            swedish: 'Ljuset brinner hela natten',
+            french: 'La bougie brûle toute la nuit',
+          },
+        },
+        {
+          translations: {
+            english: 'an axe',
+            swedish: 'en yxa',
+            french: 'une hache',
+          },
+          examples: {
+            english: 'The axe is by the door',
+            swedish: 'Yxan står vid dörren',
+            french: 'La hache est près de la porte',
+          },
+        },
+        {
+          translations: {
+            english: 'firewood',
+            swedish: 'ved',
+            french: 'le bois de chauffage',
+          },
+          examples: {
+            english: 'We need firewood for the winter',
+            swedish: 'Vi behöver ved till vintern',
+            french: "Nous avons besoin de bois de chauffage pour l'hiver",
+          },
+        },
+      ],
+      verbs: [
+        {
+          translations: {
+            english: 'to burn',
+            swedish: 'att brinna',
+            french: 'brûler',
+          },
+          examples: {
+            english: 'The fire burns in the fireplace',
+            swedish: 'Elden brinner i eldstaden',
+            french: 'Le feu brûle dans la cheminée',
+          },
+        },
+        {
+          translations: {
+            english: 'to chop',
+            swedish: 'att hugga',
+            french: 'couper',
+          },
+          examples: {
+            english: 'He chops wood',
+            swedish: 'Han hugger ved',
+            french: 'Il coupe du bois',
+          },
+        },
+        {
+          translations: {
+            english: 'to read',
+            swedish: 'att läsa',
+            french: 'lire',
+          },
+          examples: {
+            english: 'I read in the evening',
+            swedish: 'Jag läser på kvällen',
+            french: 'Je lis le soir',
+          },
+        },
+      ],
+      adjectives: [
+        {
+          translations: {
+            english: 'cosy',
+            swedish: 'mysig',
+            french: 'douillet',
+          },
+          examples: {
+            english: 'The cabin is cosy',
+            swedish: 'Stugan är mysig',
+            french: 'La cabane est douillette',
+          },
+        },
+        {
+          translations: {
+            english: 'alone',
+            swedish: 'ensam',
+            french: 'seul',
+          },
+          examples: {
+            english: 'I am alone in the cabin',
+            swedish: 'Jag är ensam i stugan',
+            french: 'Je suis seul dans la cabane',
+          },
+        },
+        {
+          translations: {
+            english: 'hidden',
+            swedish: 'gömd',
+            french: 'caché',
+          },
+          examples: {
+            english: 'The cabin is hidden among the trees',
+            swedish: 'Stugan är gömd bland träden',
+            french: 'La cabane est cachée parmi les arbres',
+          },
+        },
+      ],
+    },
+    outerNodeId: 'forest',
+    linkIds: {
+      N: null,
+      E: null,
+      S: null,
       W: null,
     },
   },

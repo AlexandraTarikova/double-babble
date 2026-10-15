@@ -53,8 +53,7 @@ export type MapNode = {
   id: string;
   title: string;
   words: Record<WordGroupsType, Word[]>;
-  parentId: null | string;
-  innerNodeIds: string[];
+  outerNodeId: null | string;
   linkIds: LinkIdsType;
 };
 

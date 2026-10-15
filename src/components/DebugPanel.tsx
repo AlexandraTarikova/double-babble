@@ -32,8 +32,9 @@ export const DebugButton = styled(TextButton)({
 export const DebugPanel: FC<{
   nodes: MapNode[];
   dispatchNodes: ActionDispatch<[action: NodeAction]>;
+  setNodeZoomedId: (id: string | null) => void;
   closeMenu: () => void;
-}> = ({ nodes, dispatchNodes, closeMenu }) => {
+}> = ({ nodes, dispatchNodes, setNodeZoomedId, closeMenu }) => {
   const [expanded, setExpanded] = useState(false);
   const isSmallScreen = useMediaQuery((t) => t.breakpoints.down('md'));
 
@@ -66,6 +67,7 @@ export const DebugPanel: FC<{
                 payload: resetHistoryTo(createEmptyMap()),
               });
               closeMenu();
+              setNodeZoomedId(null);
             }}
           >
             Clear history
@@ -77,6 +79,7 @@ export const DebugPanel: FC<{
                 payload: resetHistoryTo(structuredClone(NODES_DEMO)),
               });
               closeMenu();
+              setNodeZoomedId(null);
             }}
           >
             Use demo

@@ -93,11 +93,19 @@ const mapToScale = (value: number, min: number, max: number): number => {
 
 export const Map: FC<{
   nodes: MapNode[];
+  nodeZoomedId: string | null;
   nodeFocusedId: string | null;
   onNodeClick: (targetNode: MapNode) => void;
   onAddNodeClick: (targetNode: MapNode, direction: LinkDirectionType) => void;
   onMapClick: () => void;
-}> = ({ nodes, nodeFocusedId, onNodeClick, onAddNodeClick, onMapClick }) => {
+}> = ({
+  nodes,
+  nodeZoomedId,
+  nodeFocusedId,
+  onNodeClick,
+  onAddNodeClick,
+  onMapClick,
+}) => {
   const [nodeCenteredId, setNodeCenteredId] = useState<string | null>(null);
   const [nodeLevelPulsingId, setNodeLevelPulsingId] = useState<string | null>(
     null,
@@ -240,7 +248,11 @@ export const Map: FC<{
   }, [nodeCenteredId, scrollToNode]);
 
   return (
-    <MapZone ref={mapZoneRef} onClick={() => onMapClick()}>
+    <MapZone
+      ref={mapZoneRef}
+      onClick={() => onMapClick()}
+      isZoomed={!!nodeZoomedId}
+    >
       <MapContainer width={mapWidth} height={mapHeight}>
         {nodes.map((node) => {
           const { x, y } = positionsNormalized[node.id];
@@ -248,6 +260,7 @@ export const Map: FC<{
           const left = x * (NODE_WIDTH + NODE_SPACE);
           const top = y * (NODE_HEIGHT + NODE_SPACE);
 
+          const hasTitle = node.title !== '';
           const isFocused = nodeFocusedId === node.id;
           const isLinkedToFocused =
             !!nodeFocusedId &&
@@ -255,18 +268,26 @@ export const Map: FC<{
               .filter((item) => item !== null)
               .includes(nodeFocusedId);
 
-          const canExpandN = !Object.values(positionsNormalized).some(
-            (position) => position.x === x && position.y === y - 1,
-          );
-          const canExpandE = !Object.values(positionsNormalized).some(
-            (position) => position.x === x + 1 && position.y === y,
-          );
-          const canExpandS = !Object.values(positionsNormalized).some(
-            (position) => position.x === x && position.y === y + 1,
-          );
-          const canExpandW = !Object.values(positionsNormalized).some(
-            (position) => position.x === x - 1 && position.y === y,
-          );
+          const canExpandN =
+            hasTitle &&
+            !Object.values(positionsNormalized).some(
+              (position) => position.x === x && position.y === y - 1,
+            );
+          const canExpandE =
+            hasTitle &&
+            !Object.values(positionsNormalized).some(
+              (position) => position.x === x + 1 && position.y === y,
+            );
+          const canExpandS =
+            hasTitle &&
+            !Object.values(positionsNormalized).some(
+              (position) => position.x === x && position.y === y + 1,
+            );
+          const canExpandW =
+            hasTitle &&
+            !Object.values(positionsNormalized).some(
+              (position) => position.x === x - 1 && position.y === y,
+            );
           const level = getNodeLevel(node);
           const linksAmount = Object.values(node.linkIds).filter(
             (id) => id !== null,

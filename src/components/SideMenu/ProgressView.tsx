@@ -23,7 +23,6 @@ export const ProgressView: FC<{
   nodeInFocus: MapNode;
   languagesVisible: Language[];
   onLanguageClick?: () => void;
-  onZoomClick: () => void;
 }> = ({ languagesVisible, onLanguageClick, nodeInFocus }) => {
   const [mode, setMode] = useState<ProgressMode>('general');
   const data = useMemo(() => getWordStrengthList() ?? {}, []);

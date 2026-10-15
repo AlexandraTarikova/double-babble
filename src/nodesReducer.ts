@@ -31,6 +31,7 @@ const unlinkTargetNode = (
 
 export const NodeActionTypes = {
   addNode: 'addNode',
+  addRootNode: 'addRootNode',
   edit: 'edit',
   delete: 'delete',
   set: 'set',
@@ -44,6 +45,12 @@ export type NodeAction =
         node: MapNode;
         targetNodeId: string;
         direction: LinkDirectionType;
+      };
+    }
+  | {
+      type: 'addRootNode';
+      payload: {
+        node: MapNode;
       };
     }
   | {
@@ -90,6 +97,26 @@ export function nodesReducer(state: MapNode[], action: NodeAction): MapNode[] {
         node.id === targetNodeUpdated.id ? targetNodeUpdated : node,
       );
       return [...nodesUpdated, newNodeUpdated];
+    }
+    case NodeActionTypes.addRootNode: {
+      const outerNodeId = payload.node.outerNodeId;
+      const outerNode = state.find((node) => node.id === outerNodeId);
+      if (!outerNode) {
+        console.error('addRootNode: outer node not found: ', outerNodeId);
+        return state;
+      }
+      if (outerNode.outerNodeId) {
+        console.error('addRootNode: attempt for 2-lvl nesting: ', outerNodeId);
+        return state;
+      }
+      if (state.some((node) => node.outerNodeId === outerNodeId)) {
+        console.error(
+          'addRootNode: attempt to create root node for non-empty map: ',
+          outerNodeId,
+        );
+        return state;
+      }
+      return [...state, payload.node];
     }
     case NodeActionTypes.addWords: {
       const targetNode = state.find((node) => node.id === payload.targetNodeId);
