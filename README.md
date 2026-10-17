@@ -1,73 +1,53 @@
-# React + TypeScript + Vite
+# Double Babble
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A vocabulary-map game for learning two languages at once.
 
-Currently, two official plugins are available:
+You build a map of places — a Forest, a Village, a Castle — and each place holds the words
+that belong to it. Learning words is what makes the map grow: fill a place with enough nouns,
+verbs and adjectives and it levels up; level it up enough and it can branch out into a new
+neighbouring place. Places can also hold a small map of their own (a Cabin inside the Forest).
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+Every word is stored in three languages: the two you're learning, with English in the middle
+as the pivot. Right now that's French / English / Swedish.
 
-## React Compiler
+## What works
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- **Map** — grow places in four directions; the layout is derived from how places are linked,
+  so nodes never store coordinates.
+- **Levels** — derived from word counts, in fixed batches per level, so you can't level up on
+  nouns alone.
+- **Adding words** — with an AUTO button that fills the two outer languages from the English
+  one. It uses a free translation API as a placeholder, so results are rough.
+- **Train** — hide the outer translations, reveal one, grade yourself.
+- **Progress** — your last few grades per word.
+- **Inner maps** — zoom into a place to see its own map, one level deep.
+- **Mobile** — usable on tablets and phones, though designed for desktop first.
 
-## Expanding the ESLint configuration
+Everything is saved in `localStorage`, as a log of actions replayed on load. There's no
+backend yet; adding one is the next step.
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+Unfinished: editing words, deleting named places, search, example sentences when adding words.
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## Stack
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+React 19, TypeScript, Vite, MUI with Emotion. No router, no state library — state is a
+`useReducer` whose actions are logged and replayed.
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+## Running it
+
+```
+npm install
+npm run dev       # dev server
+npm run build     # type-check + production build
+npm run preview   # serve the production build
+npm run lint
+npm run prettier
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+A fresh start gives you a single empty place. To try it with data, open the debug panel
+(`[+]` in the top-left corner, desktop only) and choose **Use demo**.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## About
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+A personal project, written by hand to learn React and TypeScript properly, and now to learn
+backend development on top of it.

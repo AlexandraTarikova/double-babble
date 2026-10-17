@@ -326,8 +326,9 @@ they can't disagree. Also moved `calculateAllPositions` and `oppositeDirections`
 **Inner maps MVP** ✅ 2026-10-15 — see the "Inner maps" section.
 
 Still open from T0:
-- [ ] **Rewrite `README.md`** `20min` — still the Vite template. A fullstack portfolio project
-      gets read by other people.
+- [x] **Rewrite `README.md`** ✅ 2026-10-17 — short project README replacing the Vite
+      template. Update its "What works" / "Unfinished" lists when features land, and the
+      Stack section once the backend exists.
 - [ ] **Favicon** `5min` — `index.html:7` is still `/vite.svg`.
 
 ---
@@ -528,8 +529,9 @@ Two decisions first — "Before the backend" has the reasoning:
 Cheap things worth doing before the first server commit, while there's one copy of the data:
 - `schema` bump + a migration for the two silent shape changes (T3), or at least decide not to.
 - T6 `lastCheck` → `number` (`5min`).
-- T2.12 `import.meta.env.DEV` on `DebugPanel` (`5min`).
-- `README.md`.
+- T2.12 `import.meta.env.DEV` on `DebugPanel` (`5min`). Note the README's "Running it"
+  section tells people to use the debug panel for demo data — if it becomes dev-only, that
+  still works with `npm run dev`, but say so there.
 
 In downtime, by appetite: the inner-maps empty state, T4 delete a node, T4 search (now
 cross-map), Mobile v1 leftovers, T2.11.
